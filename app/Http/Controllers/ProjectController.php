@@ -311,38 +311,55 @@ class ProjectController extends Controller
     public function uploadFile(Request $request, Project $project)
     {
         $request->validate([
-            'file' => 'required|file|max:20480',
+            'files.*' => 'required|file|max:20480', // 20MB каждый
             'section' => 'nullable|string|in:general,pto,supply',
         ]);
 
-        $file = $request->file('file');
-        
-        if ($file->isValid()) {
-            $originalName = $file->getClientOriginalName();
-            $fileName = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $originalName);
-            
-            $path = $file->storeAs('projects/' . $project->id, $fileName, 'public');
+        $uploadedCount = 0;
+        $section = $request->section ?? 'general';
 
-            ProjectFile::create([
-                'company_id' => $project->company_id,
-                'project_id' => $project->id,
-                'user_id' => Auth::id(),
-                'file_path' => $path,
-                'file_name' => $originalName,
-                'file_type' => $file->getMimeType(),
-                'file_size' => $file->getSize(),
-                'section' => $request->section ?? 'general',
-            ]);
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                if ($file->isValid()) {
+                    try {
+                        $originalName = $file->getClientOriginalName();
+                        $fileName = time() . '_' . uniqid() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $originalName);
+                        
+                        // Определяем подпапку в зависимости от отдела
+                        $path = $file->storeAs('projects/' . $project->id . '/' . $section, $fileName, 'public');
 
-            Log::info('Файл загружен через uploadFile', [
-                'project_id' => $project->id,
-                'file' => $originalName
-            ]);
-
-            return back()->with('success', 'Файл загружен');
+                        ProjectFile::create([
+                            'company_id' => $project->company_id,
+                            'project_id' => $project->id,
+                            'user_id' => Auth::id(),
+                            'file_path' => $path,
+                            'file_name' => $originalName,
+                            'file_type' => $file->getMimeType(),
+                            'file_size' => $file->getSize(),
+                            'section' => $section,
+                        ]);
+                        
+                        $uploadedCount++;
+                        
+                    } catch (\Exception $e) {
+                        Log::error('Ошибка при сохранении файла', [
+                            'error' => $e->getMessage(),
+                            'file' => $file->getClientOriginalName()
+                        ]);
+                    }
+                }
+            }
         }
 
-        return back()->with('error', 'Ошибка при загрузке файла');
+        if ($uploadedCount > 0) {
+            $message = $uploadedCount === 1 
+                ? 'Файл успешно загружен' 
+                : "Загружено {$uploadedCount} файлов";
+                
+            return back()->with('success', $message);
+        }
+
+        return back()->with('error', 'Не удалось загрузить файлы');
     }
 
     public function sendToCalculation(Project $project)

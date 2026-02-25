@@ -454,19 +454,41 @@
                         </svg>
                         {{ $isRejected ? 'Загрузить исправленные файлы' : 'Загрузить файлы расчетов' }}
                     </h3>
-                    <form method="POST" action="{{ route('projects.files.upload', $project) }}" enctype="multipart/form-data">
+                    
+                    <!-- Форма с множественным выбором файлов -->
+                    <form method="POST" action="{{ route('projects.files.upload', $project) }}" enctype="multipart/form-data" class="space-y-4">
                         @csrf
                         <input type="hidden" name="section" value="pto">
-                        <div class="flex flex-col space-y-3">
-                            <input type="file" name="file" required class="w-full border-2 border-blue-200 rounded-lg p-2 bg-white">
-                            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
+                        
+                        <div class="border-2 border-dashed border-blue-200 rounded-lg p-6 text-center hover:border-blue-400 transition">
+                            <input type="file" 
+                                name="files[]" 
+                                id="pto-files" 
+                                multiple 
+                                class="hidden" 
+                                onchange="updatePTOFileList(this)">
+                            
+                            <label for="pto-files" class="cursor-pointer">
+                                <svg class="mx-auto h-12 w-12 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                 </svg>
-                                Загрузить файл
-                            </button>
+                                <p class="mt-2 text-sm text-blue-600">Нажмите для выбора файлов</p>
+                                <p class="text-xs text-gray-500">или перетащите их сюда</p>
+                            </label>
+                            
+                            <!-- Список выбранных файлов -->
+                            <div id="pto-file-list" class="mt-3 text-sm text-left max-h-32 overflow-y-auto"></div>
                         </div>
+                        
+                        <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
+                            </svg>
+                            Загрузить {{ $isRejected ? 'исправленные файлы' : 'файлы' }} ({{ $canUpload ? 'можно несколько' : '' }})
+                        </button>
                     </form>
+                    
+                    <p class="text-xs text-gray-500 mt-2">Поддерживаются любые форматы файлов. Максимальный размер одного файла: 20MB</p>
                 </div>
             @endif
             
@@ -674,19 +696,41 @@
                         </svg>
                         {{ $isRejected ? 'Загрузить исправленные файлы' : 'Загрузить файлы смет' }}
                     </h3>
-                    <form method="POST" action="{{ route('projects.files.upload', $project) }}" enctype="multipart/form-data">
+                    
+                    <!-- Форма с множественным выбором файлов -->
+                    <form method="POST" action="{{ route('projects.files.upload', $project) }}" enctype="multipart/form-data" class="space-y-4">
                         @csrf
                         <input type="hidden" name="section" value="supply">
-                        <div class="flex flex-col space-y-3">
-                            <input type="file" name="file" required class="w-full border-2 border-green-200 rounded-lg p-2 bg-white">
-                            <button type="submit" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
+                        
+                        <div class="border-2 border-dashed border-green-200 rounded-lg p-6 text-center hover:border-green-400 transition">
+                            <input type="file" 
+                                name="files[]" 
+                                id="supply-files" 
+                                multiple 
+                                class="hidden" 
+                                onchange="updateSupplyFileList(this)">
+                            
+                            <label for="supply-files" class="cursor-pointer">
+                                <svg class="mx-auto h-12 w-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                 </svg>
-                                Загрузить файл
-                            </button>
+                                <p class="mt-2 text-sm text-green-600">Нажмите для выбора файлов</p>
+                                <p class="text-xs text-gray-500">или перетащите их сюда</p>
+                            </label>
+                            
+                            <!-- Список выбранных файлов -->
+                            <div id="supply-file-list" class="mt-3 text-sm text-left max-h-32 overflow-y-auto"></div>
                         </div>
+                        
+                        <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
+                            </svg>
+                            Загрузить {{ $isRejected ? 'исправленные файлы' : 'файлы' }} (можно несколько)
+                        </button>
                     </form>
+                    
+                    <p class="text-xs text-gray-500 mt-2">Поддерживаются любые форматы файлов. Максимальный размер одного файла: 20MB</p>
                 </div>
             @endif
             
@@ -1301,5 +1345,115 @@
         document.getElementById('addParticipantModal').classList.add('hidden');
         document.getElementById('addParticipantModal').classList.remove('flex');
     }
+</script>
+
+<script>
+// Функции для отображения выбранных файлов в ПТО секции
+function updatePTOFileList(input) {
+    const fileList = document.getElementById('pto-file-list');
+    displaySelectedFiles(input, fileList);
+}
+
+// Функции для отображения выбранных файлов в Снабжении
+function updateSupplyFileList(input) {
+    const fileList = document.getElementById('supply-file-list');
+    displaySelectedFiles(input, fileList);
+}
+
+// Общая функция для отображения списка файлов
+function displaySelectedFiles(input, fileListElement) {
+    fileListElement.innerHTML = '';
+    
+    if (input.files.length > 0) {
+        const list = document.createElement('ul');
+        list.className = 'list-disc list-inside space-y-1';
+        
+        for (let i = 0; i < input.files.length; i++) {
+            const file = input.files[i];
+            const li = document.createElement('li');
+            li.className = 'text-gray-600 text-xs';
+            
+            // Форматируем размер файла
+            let fileSize = file.size;
+            let sizeText = '';
+            if (fileSize < 1024) {
+                sizeText = fileSize + ' B';
+            } else if (fileSize < 1024 * 1024) {
+                sizeText = (fileSize / 1024).toFixed(1) + ' KB';
+            } else {
+                sizeText = (fileSize / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+            
+            li.textContent = `${file.name} (${sizeText})`;
+            list.appendChild(li);
+        }
+        
+        fileListElement.appendChild(list);
+        
+        // Добавляем информацию о количестве файлов
+        const countInfo = document.createElement('p');
+        countInfo.className = 'text-xs text-blue-600 mt-2 font-medium';
+        countInfo.textContent = `Выбрано файлов: ${input.files.length}`;
+        fileListElement.appendChild(countInfo);
+    } else {
+        fileListElement.innerHTML = '<p class="text-xs text-gray-400">Файлы не выбраны</p>';
+    }
+}
+
+// Поддержка drag & drop
+document.addEventListener('DOMContentLoaded', function() {
+    // Для ПТО
+    const ptoDropZone = document.querySelector('#pto-files')?.closest('.border-2');
+    if (ptoDropZone) {
+        setupDragAndDrop(ptoDropZone, 'pto-files');
+    }
+    
+    // Для Снабжения
+    const supplyDropZone = document.querySelector('#supply-files')?.closest('.border-2');
+    if (supplyDropZone) {
+        setupDragAndDrop(supplyDropZone, 'supply-files');
+    }
+});
+
+function setupDragAndDrop(dropZone, inputId) {
+    const input = document.getElementById(inputId);
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight() {
+        dropZone.classList.add('border-blue-400', 'bg-blue-50');
+    }
+    
+    function unhighlight() {
+        dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+    }
+    
+    dropZone.addEventListener('drop', handleDrop, false);
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        input.files = files;
+        
+        // Обновляем список файлов
+        const event = new Event('change', { bubbles: true });
+        input.dispatchEvent(event);
+    }
+}
 </script>
 @endsection
