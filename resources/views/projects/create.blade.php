@@ -30,40 +30,46 @@
                 </div>
             </div>
 
-            <!-- Участники проекта -->
+            <!-- Автоматические участники -->
+            <div class="mb-6 bg-blue-50 p-4 rounded-lg">
+                <h2 class="text-lg font-semibold mb-3 text-blue-800">Автоматические участники</h2>
+                <p class="text-sm text-blue-600 mb-2">Эти сотрудники будут добавлены в проект автоматически:</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    @php
+                        $autoUsers = $users->filter(function($user) {
+                            return in_array($user->role, ['director', 'deputy_director', 'pto', 'supply']);
+                        });
+                    @endphp
+                    
+                    @forelse($autoUsers as $user)
+                        <div class="flex items-center space-x-2 text-sm text-blue-700">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>{{ $user->name }} ({{ $user->role }})</span>
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-500">Нет автоматических участников</p>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Дополнительные участники -->
             <div class="mb-6">
-                <h2 class="text-lg font-semibold mb-4">Участники проекта</h2>
+                <h2 class="text-lg font-semibold mb-4">Дополнительные участники</h2>
                 
                 <div id="participants-container">
-                    <div class="participant-row grid grid-cols-2 gap-4 mb-2">
-                        <div>
-                            <select name="participants[0][user_id]" class="w-full border rounded-md px-3 py-2">
-                                <option value="">Выберите пользователя</option>
-                                @foreach($users as $user)
-                                    <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->role }})</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="flex">
-                            <select name="participants[0][role]" class="w-full border rounded-md px-3 py-2">
-                                <option value="pto">ПТО</option>
-                                <option value="supply">Снабжение</option>
-                                <option value="project_manager">Руководитель проекта</option>
-                                <option value="site_manager">Прораб</option>
-                                <option value="accountant">Бухгалтер</option>
-                            </select>
-                            <button type="button" onclick="removeParticipant(this)" class="ml-2 text-red-600 hover:text-red-800 hidden">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
+                    <!-- Сюда будут добавляться строки -->
                 </div>
 
-                <button type="button" onclick="addParticipant()" class="mt-2 text-blue-600 hover:text-blue-800 text-sm">
-                    + Добавить участника
+                <button type="button" onclick="addParticipant()" class="mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 text-sm flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Добавить участника
                 </button>
+                
+                <p class="text-xs text-gray-500 mt-2">При выборе пользователя роль подставляется автоматически</p>
             </div>
 
             <!-- Файлы -->
@@ -96,30 +102,56 @@
 </div>
 
 <script>
-let participantCount = 1;
+let participantCount = 0;
+
+// Функция для получения списка доступных пользователей (исключая автоматических)
+function getAvailableUsers() {
+    return [
+        @foreach($users as $user)
+            @if(!in_array($user->role, ['director', 'deputy_director', 'pto', 'supply']))
+                {
+                    id: {{ $user->id }},
+                    name: "{{ $user->name }}",
+                    role: "{{ $user->role }}",
+                    roleName: "{{ $user->role === 'project_manager' ? 'Руководитель проекта' : ($user->role === 'site_manager' ? 'Прораб' : ($user->role === 'accountant' ? 'Бухгалтер' : $user->role)) }}"
+                },
+            @endif
+        @endforeach
+    ];
+}
 
 function addParticipant() {
     const container = document.getElementById('participants-container');
+    const users = getAvailableUsers();
+    
+    if (users.length === 0) {
+        alert('Нет доступных пользователей для добавления');
+        return;
+    }
+    
+    let options = '<option value="">Выберите пользователя</option>';
+    users.forEach(user => {
+        options += `<option value="${user.id}" data-role="${user.role}">${user.name} (${user.roleName})</option>`;
+    });
+    
     const newRow = document.createElement('div');
-    newRow.className = 'participant-row grid grid-cols-2 gap-4 mb-2';
+    newRow.className = 'participant-row grid grid-cols-1 md:grid-cols-2 gap-4 mb-2 p-3 bg-gray-50 rounded-lg';
     newRow.innerHTML = `
         <div>
-            <select name="participants[${participantCount}][user_id]" class="w-full border rounded-md px-3 py-2">
-                <option value="">Выберите пользователя</option>
-                @foreach($users as $user)
-                    <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->role }})</option>
-                @endforeach
+            <select name="participants[${participantCount}][user_id]" 
+                    onchange="updateRole(this, ${participantCount})"
+                    class="w-full border rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500">
+                ${options}
             </select>
         </div>
-        <div class="flex">
-            <select name="participants[${participantCount}][role]" class="w-full border rounded-md px-3 py-2">
-                <option value="pto">ПТО</option>
-                <option value="supply">Снабжение</option>
-                <option value="project_manager">Руководитель проекта</option>
-                <option value="site_manager">Прораб</option>
-                <option value="accountant">Бухгалтер</option>
-            </select>
-            <button type="button" onclick="removeParticipant(this)" class="ml-2 text-red-600 hover:text-red-800">
+        <div class="flex items-center space-x-2">
+            <input type="text" 
+                   name="participants[${participantCount}][role]" 
+                   id="role-${participantCount}"
+                   readonly
+                   placeholder="Роль определится автоматически"
+                   class="w-full bg-gray-100 border rounded-md px-3 py-2 text-gray-600">
+            <button type="button" onclick="removeParticipant(this)" class="text-red-600 hover:text-red-800 p-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                 </svg>
@@ -132,6 +164,24 @@ function addParticipant() {
 
 function removeParticipant(button) {
     button.closest('.participant-row').remove();
+}
+
+function updateRole(select, index) {
+    const selected = select.options[select.selectedIndex];
+    const roleInput = document.getElementById(`role-${index}`);
+    
+    if (selected && selected.value) {
+        const role = selected.dataset.role;
+        // Перевод ролей на русский для отображения
+        const roleNames = {
+            'project_manager': 'Руководитель проекта',
+            'site_manager': 'Прораб',
+            'accountant': 'Бухгалтер'
+        };
+        roleInput.value = roleNames[role] || role;
+    } else {
+        roleInput.value = '';
+    }
 }
 
 function updateFileList() {
@@ -150,5 +200,13 @@ function updateFileList() {
         fileList.appendChild(list);
     }
 }
+
+// Добавляем первого участника при загрузке страницы, если есть доступные пользователи
+document.addEventListener('DOMContentLoaded', function() {
+    const users = getAvailableUsers();
+    if (users.length > 0) {
+        addParticipant();
+    }
+});
 </script>
 @endsection

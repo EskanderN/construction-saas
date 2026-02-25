@@ -1188,6 +1188,27 @@
                         <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->role }})</option>
                     @endforeach
                 </select>
+
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const userSelect = document.querySelector('select[name="user_id"]');
+                    const roleSelect = document.querySelector('select[name="role"]');
+                    
+                    if (userSelect && roleSelect) {
+                        userSelect.addEventListener('change', function() {
+                            const selected = this.selectedOptions[0];
+                            if (selected && selected.dataset.role) {
+                                // Находим опцию с соответствующей ролью и выбираем её
+                                Array.from(roleSelect.options).forEach(option => {
+                                    if (option.value === selected.dataset.role) {
+                                        option.selected = true;
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+                </script>
             </div>
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Роль в проекте</label>

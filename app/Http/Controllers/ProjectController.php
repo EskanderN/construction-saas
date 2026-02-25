@@ -92,7 +92,6 @@ class ProjectController extends Controller
                 'description' => 'nullable|string',
                 'participants' => 'nullable|array',
                 'participants.*.user_id' => 'required_with:participants|exists:users,id',
-                'participants.*.role' => 'required_with:participants|string',
                 'files.*' => 'nullable|file|max:20480', // 20MB
             ], [
                 'name.required' => 'Название проекта обязательно',
@@ -118,13 +117,31 @@ class ProjectController extends Controller
             // Добавляем создателя как участника
             $this->projectService->addParticipant($project, Auth::user(), Auth::user()->role);
 
-            // Добавляем других участников
+            // Автоматически добавляем ключевых сотрудников компании (директор, замдиректора, ПТО, снабжение)
+            $companyUsers = User::where('company_id', Auth::user()->company_id)->get();
+            
+            foreach ($companyUsers as $user) {
+                // Пропускаем создателя (он уже добавлен)
+                if ($user->id === Auth::id()) {
+                    continue;
+                }
+                
+                // Добавляем по ролям
+                if (in_array($user->role, ['director', 'deputy_director', 'pto', 'supply'])) {
+                    if (!$this->isUserInProject($project, $user->id)) {
+                        $this->projectService->addParticipant($project, $user, $user->role);
+                    }
+                }
+            }
+
+            // Добавляем дополнительных участников из формы
             if ($request->has('participants') && is_array($request->participants)) {
                 foreach ($request->participants as $participantData) {
                     if (isset($participantData['user_id']) && !empty($participantData['user_id'])) {
                         $user = User::find($participantData['user_id']);
-                        if ($user) {
-                            $this->projectService->addParticipant($project, $user, $participantData['role']);
+                        if ($user && !$this->isUserInProject($project, $user->id)) {
+                            // Используем роль пользователя из БД, а не из формы
+                            $this->projectService->addParticipant($project, $user, $user->role);
                         }
                     }
                 }
@@ -174,6 +191,14 @@ class ProjectController extends Controller
                 ->withInput()
                 ->with('error', 'Ошибка при создании проекта: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Проверка, есть ли пользователь уже в проекте
+     */
+    private function isUserInProject(Project $project, $userId): bool
+    {
+        return $project->participants()->where('user_id', $userId)->exists();
     }
 
     public function show(Project $project)
@@ -229,6 +254,11 @@ class ProjectController extends Controller
         ]);
 
         $user = User::find($request->user_id);
+        
+        // Проверяем, не добавлен ли пользователь уже
+        if ($this->isUserInProject($project, $user->id)) {
+            return back()->with('error', 'Этот пользователь уже является участником проекта');
+        }
 
         try {
             $this->projectService->addParticipant($project, $user, $request->role);
