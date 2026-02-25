@@ -103,7 +103,7 @@ class User extends Authenticatable
         return $this->isAccountant() || $this->canManageProjects();
     }
 
-        public function isPTO(): bool
+    public function isPTO(): bool
     {
         return $this->role === 'pto';
     }
