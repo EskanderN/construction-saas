@@ -219,7 +219,10 @@ class ProjectController extends Controller
             ->whereNotIn('id', $project->participants->pluck('id'))
             ->get();
 
-        return view('projects.show', compact('project', 'availableUsers'));
+        // Добавляем всех пользователей компании для модального окна
+        $users = User::where('company_id', $project->company_id)->get();
+
+        return view('projects.show', compact('project', 'availableUsers', 'users'));
     }
 
     public function edit(Project $project)
@@ -248,28 +251,63 @@ class ProjectController extends Controller
     {
         $this->authorize('manageParticipants', $project);
 
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'role' => 'required|string|in:' . implode(',', UserRole::values()),
-        ]);
-
-        $user = User::find($request->user_id);
-        
-        // Проверяем, не добавлен ли пользователь уже
-        if ($this->isUserInProject($project, $user->id)) {
-            return back()->with('error', 'Этот пользователь уже является участником проекта');
+        // Проверяем, что пришел массив participants
+        if (!$request->has('participants') || !is_array($request->participants)) {
+            return back()->with('error', 'Не выбраны пользователи для добавления');
         }
 
-        try {
-            $this->projectService->addParticipant($project, $user, $request->role);
-            return back()->with('success', 'Участник добавлен');
-        } catch (\Exception $e) {
-            Log::error('Ошибка при добавлении участника', [
-                'error' => $e->getMessage(),
-                'project_id' => $project->id,
-                'user_id' => $request->user_id
-            ]);
-            return back()->with('error', $e->getMessage());
+        $addedCount = 0;
+        $errors = [];
+
+        foreach ($request->participants as $participantData) {
+            if (!isset($participantData['user_id']) || empty($participantData['user_id'])) {
+                continue;
+            }
+
+            $user = User::find($participantData['user_id']);
+            $role = $participantData['role'] ?? $user->role;
+
+            // Проверяем, не добавлен ли пользователь уже
+            if ($this->isUserInProject($project, $user->id)) {
+                $errors[] = "Пользователь {$user->name} уже является участником проекта";
+                continue;
+            }
+
+            // Проверяем, не занята ли роль (для уникальных ролей)
+            $uniqueRoles = ['director', 'deputy_director', 'pto', 'supply'];
+            if (in_array($role, $uniqueRoles)) {
+                $roleExists = $project->participants()
+                    ->wherePivot('role', $role)
+                    ->exists();
+                    
+                if ($roleExists) {
+                    $errors[] = "Роль {$role} уже занята в проекте";
+                    continue;
+                }
+            }
+
+            try {
+                $this->projectService->addParticipant($project, $user, $role);
+                $addedCount++;
+            } catch (\Exception $e) {
+                $errors[] = "Ошибка при добавлении {$user->name}: " . $e->getMessage();
+                Log::error('Ошибка при добавлении участника', [
+                    'error' => $e->getMessage(),
+                    'project_id' => $project->id,
+                    'user_id' => $user->id
+                ]);
+            }
+        }
+
+        // Формируем сообщение
+        if ($addedCount > 0) {
+            $message = "Добавлено участников: {$addedCount}";
+            if (!empty($errors)) {
+                $message .= ". " . implode('. ', $errors);
+            }
+            return back()->with('success', $message);
+        } else {
+            return back()->with('error', implode('. ', $errors) ?: 'Не удалось добавить участников');
         }
     }
 

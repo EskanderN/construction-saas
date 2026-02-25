@@ -1081,7 +1081,7 @@
                     </div>
                 </div>
                 
-                <!-- Панель действий с файлами (ВЫНЕСЕНА НАВЕРХ) -->
+                <!-- Панель действий с файлами -->
                 <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
                     <div class="flex items-center space-x-3">
                         <!-- Кнопка выбора всех файлов -->
@@ -1419,63 +1419,364 @@
     </div>
 </div>
 
-<!-- Модальное окно для добавления участника -->
-<div id="addParticipantModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 class="text-lg font-bold mb-4">Добавить участника</h3>
-        <form method="POST" action="{{ route('projects.participants.add', $project) }}">
+<!-- Модальное окно для добавления участников (ОБНОВЛЕННЫЙ ДИЗАЙН) -->
+<div id="addParticipantModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl transform transition-all">
+        <!-- Заголовок с градиентом -->
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">Добавить участников</h3>
+                    <p class="text-sm text-gray-500">Выберите пользователей для добавления в проект</p>
+                </div>
+            </div>
+            <button onclick="closeAddParticipantModal()" class="text-gray-400 hover:text-gray-600 transition p-2 hover:bg-gray-100 rounded-full">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <form method="POST" action="{{ route('projects.participants.add', $project) }}" id="add-participant-form">
             @csrf
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Пользователь</label>
-                <select name="user_id" required class="w-full border rounded-md px-3 py-2">
-                    <option value="">Выберите пользователя</option>
-                    @foreach($availableUsers as $user)
-                        <option value="{{ $user->id }}">{{ $user->name }} ({{ $user->role }})</option>
-                    @endforeach
-                </select>
-
-                <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    const userSelect = document.querySelector('select[name="user_id"]');
-                    const roleSelect = document.querySelector('select[name="role"]');
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                    <span class="flex items-center">
+                        <svg class="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                        Выберите пользователей
+                    </span>
+                </label>
+                
+                <div class="max-h-72 overflow-y-auto border border-gray-200 rounded-xl p-2 space-y-2 bg-gray-50">
+                    @php
+                        $existingRoles = $project->participants->pluck('pivot.role')->toArray();
+                    @endphp
                     
-                    if (userSelect && roleSelect) {
-                        userSelect.addEventListener('change', function() {
-                            const selected = this.selectedOptions[0];
-                            if (selected && selected.dataset.role) {
-                                // Находим опцию с соответствующей ролью и выбираем её
-                                Array.from(roleSelect.options).forEach(option => {
-                                    if (option.value === selected.dataset.role) {
-                                        option.selected = true;
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
-                </script>
+                    @forelse($availableUsers as $user)
+                        @php
+                            $roleExists = in_array($user->role, $existingRoles);
+                            $canAdd = !$roleExists;
+                            
+                            // Цвета для разных ролей
+                            $roleColors = [
+                                'director' => 'bg-purple-100 text-purple-700 border-purple-200',
+                                'deputy_director' => 'bg-indigo-100 text-indigo-700 border-indigo-200',
+                                'pto' => 'bg-blue-100 text-blue-700 border-blue-200',
+                                'supply' => 'bg-green-100 text-green-700 border-green-200',
+                                'project_manager' => 'bg-yellow-100 text-yellow-700 border-yellow-200',
+                                'site_manager' => 'bg-orange-100 text-orange-700 border-orange-200',
+                                'accountant' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                                'default' => 'bg-gray-100 text-gray-700 border-gray-200'
+                            ];
+                            
+                            $roleColor = $roleColors[$user->role] ?? $roleColors['default'];
+                            
+                            // Русские названия ролей
+                            $roleNames = [
+                                'director' => 'Директор',
+                                'deputy_director' => 'Зам. директора',
+                                'pto' => 'ПТО',
+                                'supply' => 'Снабжение',
+                                'project_manager' => 'Руководитель проекта',
+                                'site_manager' => 'Прораб',
+                                'accountant' => 'Бухгалтер'
+                            ];
+                        @endphp
+                        
+                        <div class="flex items-center p-3 rounded-xl transition-all duration-200 
+                            {{ $canAdd ? 'bg-white hover:shadow-md border border-gray-200' : 'bg-gray-100 opacity-60' }}"
+                            id="user-row-{{ $user->id }}">
+                            <div class="flex items-center flex-1">
+                                <div class="relative">
+                                    <input type="checkbox" 
+                                           name="users[]" 
+                                           value="{{ $user->id }}" 
+                                           id="user-{{ $user->id }}"
+                                           class="user-checkbox w-5 h-5 text-blue-600 rounded-lg border-gray-300 focus:ring-blue-500 focus:ring-2 transition"
+                                           {{ !$canAdd ? 'disabled' : '' }}
+                                           data-role="{{ $user->role }}"
+                                           data-name="{{ $user->name }}">
+                                    @if(!$canAdd)
+                                        <div class="absolute inset-0 bg-gray-200 rounded-lg opacity-30"></div>
+                                    @endif
+                                </div>
+                                
+                                <label for="user-{{ $user->id }}" class="ml-3 flex-1 flex items-center justify-between cursor-pointer {{ !$canAdd ? 'cursor-not-allowed' : '' }}">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                                <span class="text-lg">
+                                                    @php
+                                                        $icons = [
+                                                            'director' => '👑',
+                                                            'deputy_director' => '⭐',
+                                                            'pto' => '📐',
+                                                            'supply' => '📦',
+                                                            'project_manager' => '📋',
+                                                            'site_manager' => '🔧',
+                                                            'accountant' => '💰',
+                                                        ];
+                                                        echo $icons[$user->role] ?? '👤';
+                                                    @endphp
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-800">{{ $user->name }}</p>
+                                            <p class="text-xs text-gray-500">{{ $user->email ?? '' }}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-xs px-3 py-1.5 rounded-full {{ $roleColor }} font-medium">
+                                            {{ $roleNames[$user->role] ?? $user->role }}
+                                        </span>
+                                        
+                                        @if($canAdd)
+                                            <span class="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full flex items-center">
+                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                                будет добавлен
+                                            </span>
+                                        @else
+                                            <span class="text-xs px-3 py-1.5 bg-gray-200 text-gray-600 rounded-full flex items-center">
+                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                                </svg>
+                                                уже есть
+                                            </span>
+                                        @endif
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-12">
+                            <div class="text-6xl mb-4 opacity-30">👥</div>
+                            <p class="text-gray-500 font-medium">Нет доступных пользователей</p>
+                            <p class="text-sm text-gray-400 mt-1">Все пользователи уже добавлены в проект</p>
+                        </div>
+                    @endforelse
+                </div>
+                
+                <p class="text-xs text-gray-500 mt-3 flex items-center">
+                    <svg class="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Роль определится автоматически по должности пользователя
+                </p>
             </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Роль в проекте</label>
-                <select name="role" required class="w-full border rounded-md px-3 py-2">
-                    <option value="pto">ПТО</option>
-                    <option value="supply">Снабжение</option>
-                    <option value="project_manager">Руководитель проекта</option>
-                    <option value="site_manager">Прораб</option>
-                    <option value="accountant">Бухгалтер</option>
-                </select>
+            
+            <!-- Панель выбранных пользователей -->
+            <div id="selected-users-info" class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-sm font-semibold text-blue-800 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Выбрано пользователей: <span id="selected-count" class="ml-1 bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs">0</span>
+                    </p>
+                    <button onclick="resetUserSelection()" class="text-xs text-blue-600 hover:text-blue-800 flex items-center">
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Сбросить
+                    </button>
+                </div>
+                <div id="selected-users-list" class="space-y-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar"></div>
             </div>
-            <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeAddParticipantModal()" class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">
+
+            <!-- Кнопки действий -->
+            <div class="flex justify-end space-x-3 border-t pt-4">
+                <button type="button" onclick="closeAddParticipantModal()" 
+                        class="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
                     Отмена
                 </button>
-                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
-                    Добавить
+                <button type="submit" id="add-participants-btn" 
+                        class="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/30 flex items-center"
+                        disabled>
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    <span>Добавить выбранных</span>
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<style>
+    /* Кастомный скроллбар для списка выбранных пользователей */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+    </style>
+
+    <script>
+    // Функции для модального окна добавления участников
+    function updateSelectedUsers() {
+        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+        const selectedCount = checkboxes.length;
+        const selectedInfo = document.getElementById('selected-users-info');
+        const selectedList = document.getElementById('selected-users-list');
+        const submitBtn = document.getElementById('add-participants-btn');
+        const countSpan = document.getElementById('selected-count');
+        
+        if (selectedCount > 0) {
+            selectedInfo.classList.remove('hidden');
+            submitBtn.disabled = false;
+            countSpan.textContent = selectedCount;
+            
+            // Обновляем список выбранных с анимацией
+            let listHtml = '';
+            checkboxes.forEach((cb, index) => {
+                const row = cb.closest('[id^="user-row-"]');
+                const userName = cb.dataset.name;
+                const userRole = cb.dataset.role;
+                
+                // Русские названия ролей
+                const roleNames = {
+                    'director': 'Директор',
+                    'deputy_director': 'Зам. директора',
+                    'pto': 'ПТО',
+                    'supply': 'Снабжение',
+                    'project_manager': 'Руководитель проекта',
+                    'site_manager': 'Прораб',
+                    'accountant': 'Бухгалтер'
+                };
+                
+                // Цвета для разных ролей в списке выбранных
+                const roleColors = {
+                    'director': 'bg-purple-100 text-purple-700',
+                    'deputy_director': 'bg-indigo-100 text-indigo-700',
+                    'pto': 'bg-blue-100 text-blue-700',
+                    'supply': 'bg-green-100 text-green-700',
+                    'project_manager': 'bg-yellow-100 text-yellow-700',
+                    'site_manager': 'bg-orange-100 text-orange-700',
+                    'accountant': 'bg-emerald-100 text-emerald-700'
+                };
+                
+                const roleColor = roleColors[userRole] || 'bg-gray-100 text-gray-700';
+                
+                listHtml += `
+                    <div class="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm border border-blue-100 animate-fade-in" style="animation-delay: ${index * 50}ms">
+                        <div class="flex items-center">
+                            <span class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs mr-2">
+                                👤
+                            </span>
+                            <span class="text-sm font-medium text-gray-700">${userName}</span>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded-full ${roleColor}">
+                            ${roleNames[userRole] || userRole}
+                        </span>
+                    </div>
+                `;
+            });
+            selectedList.innerHTML = listHtml;
+        } else {
+            selectedInfo.classList.add('hidden');
+            submitBtn.disabled = true;
+        }
+    }
+
+    // Сброс выбора
+    function resetUserSelection() {
+        document.querySelectorAll('.user-checkbox:checked').forEach(cb => {
+            cb.checked = false;
+        });
+        updateSelectedUsers();
+    }
+
+    // Добавляем анимацию появления
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Добавляем обработчики для чекбоксов
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.user-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateSelectedUsers);
+        });
+    });
+
+    // Переопределяем отправку формы
+    document.getElementById('add-participant-form')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+        if (checkboxes.length === 0) return;
+        
+        // Добавляем анимацию загрузки на кнопку
+        const submitBtn = document.getElementById('add-participants-btn');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = `
+            <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Добавление...
+        `;
+        submitBtn.disabled = true;
+        
+        // Создаем скрытые поля для каждого пользователя
+        checkboxes.forEach(cb => {
+            const userId = cb.value;
+            const userRole = cb.dataset.role;
+            
+            const userIdInput = document.createElement('input');
+            userIdInput.type = 'hidden';
+            userIdInput.name = 'participants[' + userId + '][user_id]';
+            userIdInput.value = userId;
+            this.appendChild(userIdInput);
+            
+            const roleInput = document.createElement('input');
+            roleInput.type = 'hidden';
+            roleInput.name = 'participants[' + userId + '][role]';
+            roleInput.value = userRole;
+            this.appendChild(roleInput);
+        });
+        
+        // Отправляем форму
+        this.submit();
+    });
+</script>
 
 <script>
     function showTab(tabName) {
@@ -1827,7 +2128,7 @@ function setupDragAndDrop(dropZone, inputId) {
     });
 </script>
 <script>
-    // Функции для работы с файлами ПТО
+    // Функции для работы с файлами ПТО и Снабжения
     let selectedPTOFiles = new Set();
     let selectedSupplyFiles = new Set();
 
@@ -2003,54 +2304,6 @@ function setupDragAndDrop(dropZone, inputId) {
         });
     }
 
-    // Функции для отображения выбранных файлов при загрузке
-    function updatePTOFileList(input) {
-        const fileList = document.getElementById('pto-file-list');
-        displaySelectedFiles(input, fileList);
-    }
-
-    function updateSupplyFileList(input) {
-        const fileList = document.getElementById('supply-file-list');
-        displaySelectedFiles(input, fileList);
-    }
-
-    function displaySelectedFiles(input, fileListElement) {
-        fileListElement.innerHTML = '';
-        
-        if (input.files.length > 0) {
-            const list = document.createElement('ul');
-            list.className = 'list-disc list-inside space-y-1';
-            
-            for (let i = 0; i < input.files.length; i++) {
-                const file = input.files[i];
-                const li = document.createElement('li');
-                li.className = 'text-gray-600 text-xs';
-                
-                let fileSize = file.size;
-                let sizeText = '';
-                if (fileSize < 1024) {
-                    sizeText = fileSize + ' B';
-                } else if (fileSize < 1024 * 1024) {
-                    sizeText = (fileSize / 1024).toFixed(1) + ' KB';
-                } else {
-                    sizeText = (fileSize / (1024 * 1024)).toFixed(1) + ' MB';
-                }
-                
-                li.textContent = `${file.name} (${sizeText})`;
-                list.appendChild(li);
-            }
-            
-            fileListElement.appendChild(list);
-            
-            const countInfo = document.createElement('p');
-            countInfo.className = 'text-xs text-blue-600 mt-2 font-medium';
-            countInfo.textContent = `Выбрано файлов: ${input.files.length}`;
-            fileListElement.appendChild(countInfo);
-        } else {
-            fileListElement.innerHTML = '<p class="text-xs text-gray-400">Файлы не выбраны</p>';
-        }
-    }
-
     // Инициализация при загрузке страницы
     document.addEventListener('DOMContentLoaded', function() {
         console.log('DOM loaded, initializing file handlers');
@@ -2090,7 +2343,7 @@ function setupDragAndDrop(dropZone, inputId) {
 </script>
 
 <script>
-    // Хранилище выбранных файлов
+    // Хранилище выбранных файлов для общего раздела
     let selectedFiles = new Set();
 
     // Функция обновления счетчика выбранных файлов
@@ -2105,12 +2358,14 @@ function setupDragAndDrop(dropZone, inputId) {
         const deleteBtn = document.getElementById('delete-selected-btn');
         const deleteText = document.getElementById('delete-selected-text');
         
-        if (selectedFiles.size > 0) {
-            deleteBtn.classList.remove('opacity-50', 'pointer-events-none');
-            deleteText.textContent = `Удалить выбранные (${selectedFiles.size})`;
-        } else {
-            deleteBtn.classList.add('opacity-50', 'pointer-events-none');
-            deleteText.textContent = 'Удалить выбранные';
+        if (deleteBtn) {
+            if (selectedFiles.size > 0) {
+                deleteBtn.classList.remove('opacity-50', 'pointer-events-none');
+                deleteText.textContent = `Удалить выбранные (${selectedFiles.size})`;
+            } else {
+                deleteBtn.classList.add('opacity-50', 'pointer-events-none');
+                deleteText.textContent = 'Удалить выбранные';
+            }
         }
     }
 
@@ -2173,66 +2428,87 @@ function setupDragAndDrop(dropZone, inputId) {
         });
     }
 
-    // Функция удаления одного файла
-    function deleteSingleFile(fileId) {
-        if (!confirm('Удалить этот файл?')) return;
+    // Функции для модального окна добавления участников
+    function updateSelectedUsers() {
+        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+        const selectedCount = checkboxes.length;
+        const selectedInfo = document.getElementById('selected-users-info');
+        const selectedList = document.getElementById('selected-users-list');
+        const submitBtn = document.getElementById('add-participants-btn');
         
-        const projectId = {{ $project->id }};
-        
-        fetch(`/projects/${projectId}/files/${fileId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const fileElement = document.getElementById(`file-${fileId}`);
-                if (fileElement) {
-                    fileElement.remove();
-                    
-                    // Удаляем из выбранных если был выбран
-                    selectedFiles.delete(fileId.toString());
-                    updateSelectedCount();
-                    
-                    // Проверяем, остались ли файлы
-                    const anyFiles = document.querySelectorAll('.file-item').length;
-                    if (anyFiles === 0) {
-                        location.reload();
-                    }
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Ошибка:', error);
-        });
-    }
-
-    // Функция сворачивания/разворачивания
-    function toggleUserFiles(userId) {
-        const filesDiv = document.getElementById(`files-${userId}`);
-        const arrow = document.getElementById(`arrow-${userId}`);
-        
-        if (filesDiv.style.display === 'none') {
-            filesDiv.style.display = '';
-            arrow.style.transform = 'rotate(0deg)';
+        if (selectedCount > 0) {
+            selectedInfo.classList.remove('hidden');
+            submitBtn.disabled = false;
+            
+            // Обновляем счетчик
+            document.getElementById('selected-count').textContent = selectedCount;
+            
+            // Обновляем список выбранных
+            let listHtml = '';
+            checkboxes.forEach(cb => {
+                const userName = cb.dataset.name;
+                const userRole = cb.dataset.role;
+                listHtml += `<div class="flex justify-between">
+                    <span>${userName}</span>
+                    <span class="text-blue-600">→ ${userRole}</span>
+                </div>`;
+            });
+            selectedList.innerHTML = listHtml;
         } else {
-            filesDiv.style.display = 'none';
-            arrow.style.transform = 'rotate(-90deg)';
+            selectedInfo.classList.add('hidden');
+            submitBtn.disabled = true;
         }
     }
 
-    // Инициализация при загрузке
+    // Сброс выбора
+    function resetUserSelection() {
+        document.querySelectorAll('.user-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+        updateSelectedUsers();
+    }
+
+    // Добавляем обработчики для чекбоксов пользователей
     document.addEventListener('DOMContentLoaded', function() {
-        // Добавляем обработчики для чекбоксов
+        document.querySelectorAll('.user-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateSelectedUsers);
+        });
+        
+        // Добавляем обработчики для чекбоксов файлов
         document.querySelectorAll('.file-checkbox').forEach(cb => {
             cb.addEventListener('change', updateSelectedCount);
         });
+    });
+
+    // Переопределяем отправку формы для добавления ролей
+    document.getElementById('add-participant-form')?.addEventListener('submit', function(e) {
+        e.preventDefault();
         
-        console.log('File management initialized');
+        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+        if (checkboxes.length === 0) return;
+        
+        // Создаем скрытые поля для каждого пользователя
+        checkboxes.forEach(cb => {
+            const userId = cb.value;
+            const userRole = cb.dataset.role;
+            
+            // Добавляем скрытое поле для user_id
+            const userIdInput = document.createElement('input');
+            userIdInput.type = 'hidden';
+            userIdInput.name = 'participants[' + userId + '][user_id]';
+            userIdInput.value = userId;
+            this.appendChild(userIdInput);
+            
+            // Добавляем скрытое поле для роли
+            const roleInput = document.createElement('input');
+            roleInput.type = 'hidden';
+            roleInput.name = 'participants[' + userId + '][role]';
+            roleInput.value = userRole;
+            this.appendChild(roleInput);
+        });
+        
+        // Отправляем форму
+        this.submit();
     });
 </script>
 @endsection
