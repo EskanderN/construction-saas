@@ -24,12 +24,12 @@ class ProjectPolicy
         if ($user->company_id !== $project->company_id) {
             return false;
         }
-        
+
         // Директор и замдиректора могут видеть все проекты компании
         if ($user->canManageProjects()) {
             return true;
         }
-        
+
         // Остальные пользователи могут видеть только проекты, в которых они участвуют
         return $project->participants()->where('user_id', $user->id)->exists();
     }
@@ -108,5 +108,102 @@ class ProjectPolicy
     public function createMaterial(User $user, Project $project): bool
     {
         return $user->company_id === $project->company_id && $user->isSupply();
+    }
+
+    /**
+     * Determine whether the user can upload files to Supply section.
+     */
+    public function uploadSupplyFiles(User $user, Project $project): bool
+    {
+        // Только снабжение может загружать файлы в свой раздел
+        if (!$user->isSupply()) {
+            return false;
+        }
+
+        // Проверяем что пользователь участник проекта
+        $isParticipant = $project->participants()
+            ->where('user_id', $user->id)
+            ->wherePivot('role', 'supply')
+            ->exists();
+
+        if (!$isParticipant) {
+            return false;
+        }
+
+        // Можно загружать если отдел не утвержден
+        return $project->supply_approved !== true;
+    }
+
+    /**
+     * Determine whether the user can submit Supply calculations.
+     */
+    public function submitSupply(User $user, Project $project): bool
+    {
+        // Только снабжение может отправлять расчеты
+        if (!$user->isSupply()) {
+            return false;
+        }
+
+        // Проверяем что пользователь участник проекта
+        $isParticipant = $project->participants()
+            ->where('user_id', $user->id)
+            ->wherePivot('role', 'supply')
+            ->exists();
+
+        if (!$isParticipant) {
+            return false;
+        }
+
+        // Можно отправлять если есть файлы и отдел не утвержден и не отправлен (или на доработке)
+        $hasFiles = $project->files()
+            ->where('section', 'supply')
+            ->where('user_id', $user->id)
+            ->exists();
+
+        $isSubmitted = !is_null($project->supply_submitted_at);
+        $isRejected = $project->supply_approved === false;
+
+        return $hasFiles && $project->supply_approved !== true && (!$isSubmitted || $isRejected);
+    }
+
+    /**
+     * Determine whether the user can view Supply section (for PTO)
+     */
+    public function viewSupplySection(User $user, Project $project): bool
+    {
+        return ($user->isSupply() || $user->isDirector() || $user->isDeputyDirector()) &&
+            $user->company_id === $project->company_id;
+    }
+
+        /**
+     * Determine whether the user can submit PTO calculations.
+     */
+    public function submitPTO(User $user, Project $project): bool
+    {
+        // Только ПТО может отправлять расчеты
+        if (!$user->isPTO()) {
+            return false;
+        }
+        
+        // Проверяем что пользователь участник проекта
+        $isParticipant = $project->participants()
+            ->where('user_id', $user->id)
+            ->wherePivot('role', 'pto')
+            ->exists();
+            
+        if (!$isParticipant) {
+            return false;
+        }
+        
+        // Можно отправлять если есть файлы и отдел не утвержден и не отправлен (или на доработке)
+        $hasFiles = $project->files()
+            ->where('section', 'pto')
+            ->where('user_id', $user->id)
+            ->exists();
+            
+        $isSubmitted = !is_null($project->pto_submitted_at);
+        $isRejected = $project->pto_approved === false;
+        
+        return $hasFiles && $project->pto_approved !== true && (!$isSubmitted || $isRejected);
     }
 }
