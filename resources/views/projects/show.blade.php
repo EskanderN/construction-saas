@@ -966,7 +966,7 @@
                     <div class="flex items-center space-x-4">
                         <h3 class="text-lg font-semibold text-gray-800">📁 Файлы проекта</h3>
                         
-                        <!-- Фильтры в виде красивых кнопок -->
+                        <!-- Фильтры -->
                         <div class="flex bg-gray-100 rounded-lg p-1">
                             <button onclick="filterFiles('all')" 
                                     class="filter-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 
@@ -1013,6 +1013,46 @@
                         </select>
                     </div>
                 </div>
+                
+                <!-- Панель действий с файлами (ВЫНЕСЕНА НАВЕРХ) -->
+                <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <!-- Кнопка выбора всех файлов -->
+                        <button onclick="toggleSelectAllFiles()" 
+                                class="text-sm text-blue-600 hover:text-blue-800 flex items-center px-3 py-1.5 bg-blue-50 rounded-lg transition">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                            Выбрать все
+                        </button>
+                        
+                        <!-- Кнопка удаления выбранных -->
+                        <button onclick="deleteSelectedFiles()" 
+                                id="delete-selected-btn"
+                                class="text-sm text-red-600 hover:text-red-800 flex items-center px-3 py-1.5 bg-red-50 rounded-lg transition opacity-50 pointer-events-none">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                            <span id="delete-selected-text">Удалить выбранные</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Кнопка загрузки файлов -->
+                    <button onclick="document.getElementById('file-upload-input').click()" 
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
+                        </svg>
+                        Загрузить файлы
+                    </button>
+                </div>
+                
+                <!-- Форма для загрузки нескольких файлов -->
+                <form id="file-upload-form" method="POST" action="{{ route('projects.files.upload', $project) }}" enctype="multipart/form-data" class="hidden">
+                    @csrf
+                    <input type="hidden" name="section" value="general">
+                    <input type="file" id="file-upload-input" name="files[]" multiple onchange="this.form.submit()">
+                </form>
             </div>
 
             <!-- Список файлов -->
@@ -1980,5 +2020,152 @@ function setupDragAndDrop(dropZone, inputId) {
     // Для отладки - выводим в консоль
     window.deleteSingleFile = deleteSingleFile;
     window.deleteSelectedFiles = deleteSelectedFiles;
+</script>
+
+<script>
+    // Хранилище выбранных файлов
+    let selectedFiles = new Set();
+
+    // Функция обновления счетчика выбранных файлов
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.file-checkbox:checked');
+        selectedFiles.clear();
+        
+        checkboxes.forEach(cb => {
+            selectedFiles.add(cb.dataset.fileId);
+        });
+        
+        const deleteBtn = document.getElementById('delete-selected-btn');
+        const deleteText = document.getElementById('delete-selected-text');
+        
+        if (selectedFiles.size > 0) {
+            deleteBtn.classList.remove('opacity-50', 'pointer-events-none');
+            deleteText.textContent = `Удалить выбранные (${selectedFiles.size})`;
+        } else {
+            deleteBtn.classList.add('opacity-50', 'pointer-events-none');
+            deleteText.textContent = 'Удалить выбранные';
+        }
+    }
+
+    // Функция выбора всех файлов
+    function toggleSelectAllFiles() {
+        const checkboxes = document.querySelectorAll('.file-checkbox');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        checkboxes.forEach(cb => {
+            cb.checked = !allChecked;
+        });
+        
+        updateSelectedCount();
+    }
+
+    // Функция удаления выбранных файлов
+    function deleteSelectedFiles() {
+        if (selectedFiles.size === 0) return;
+        
+        if (!confirm(`Удалить ${selectedFiles.size} выбранных файлов?`)) return;
+        
+        const projectId = {{ $project->id }};
+        const fileIds = Array.from(selectedFiles);
+        let deletedCount = 0;
+        
+        fileIds.forEach(fileId => {
+            fetch(`/projects/${projectId}/files/${fileId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const fileElement = document.getElementById(`file-${fileId}`);
+                    if (fileElement) {
+                        fileElement.remove();
+                    }
+                    
+                    deletedCount++;
+                    
+                    if (deletedCount === fileIds.length) {
+                        selectedFiles.clear();
+                        updateSelectedCount();
+                        
+                        // Проверяем, остались ли файлы
+                        const anyFiles = document.querySelectorAll('.file-item').length;
+                        if (anyFiles === 0) {
+                            location.reload(); // Перезагружаем если файлов больше нет
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при удалении:', error);
+            });
+        });
+    }
+
+    // Функция удаления одного файла
+    function deleteSingleFile(fileId) {
+        if (!confirm('Удалить этот файл?')) return;
+        
+        const projectId = {{ $project->id }};
+        
+        fetch(`/projects/${projectId}/files/${fileId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const fileElement = document.getElementById(`file-${fileId}`);
+                if (fileElement) {
+                    fileElement.remove();
+                    
+                    // Удаляем из выбранных если был выбран
+                    selectedFiles.delete(fileId.toString());
+                    updateSelectedCount();
+                    
+                    // Проверяем, остались ли файлы
+                    const anyFiles = document.querySelectorAll('.file-item').length;
+                    if (anyFiles === 0) {
+                        location.reload();
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+        });
+    }
+
+    // Функция сворачивания/разворачивания
+    function toggleUserFiles(userId) {
+        const filesDiv = document.getElementById(`files-${userId}`);
+        const arrow = document.getElementById(`arrow-${userId}`);
+        
+        if (filesDiv.style.display === 'none') {
+            filesDiv.style.display = '';
+            arrow.style.transform = 'rotate(0deg)';
+        } else {
+            filesDiv.style.display = 'none';
+            arrow.style.transform = 'rotate(-90deg)';
+        }
+    }
+
+    // Инициализация при загрузке
+    document.addEventListener('DOMContentLoaded', function() {
+        // Добавляем обработчики для чекбоксов
+        document.querySelectorAll('.file-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateSelectedCount);
+        });
+        
+        console.log('File management initialized');
+    });
 </script>
 @endsection

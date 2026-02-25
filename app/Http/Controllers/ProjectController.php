@@ -91,8 +91,8 @@ class ProjectController extends Controller
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
                 'participants' => 'nullable|array',
-                'participants.*.user_id' => 'required_with:participants|exists:users,id',
-                'files.*' => 'nullable|file|max:20480', // 20MB
+                'participants.*.user_id' => 'nullable|exists:users,id', // ИЗМЕНЕНО: теперь nullable
+                'files.*' => 'nullable|file|max:20480',
             ], [
                 'name.required' => 'Название проекта обязательно',
                 'files.*.max' => 'Файл слишком большой (макс. 20MB)',
@@ -117,7 +117,7 @@ class ProjectController extends Controller
             // Добавляем создателя как участника
             $this->projectService->addParticipant($project, Auth::user(), Auth::user()->role);
 
-            // Автоматически добавляем ключевых сотрудников компании (директор, замдиректора, ПТО, снабжение)
+            // Автоматически добавляем ключевых сотрудников компании
             $companyUsers = User::where('company_id', Auth::user()->company_id)->get();
             
             foreach ($companyUsers as $user) {
@@ -134,13 +134,13 @@ class ProjectController extends Controller
                 }
             }
 
-            // Добавляем дополнительных участников из формы
+            // Добавляем дополнительных участников из формы (ТОЛЬКО если они есть)
             if ($request->has('participants') && is_array($request->participants)) {
                 foreach ($request->participants as $participantData) {
+                    // Проверяем что user_id существует и не пустой
                     if (isset($participantData['user_id']) && !empty($participantData['user_id'])) {
                         $user = User::find($participantData['user_id']);
                         if ($user && !$this->isUserInProject($project, $user->id)) {
-                            // Используем роль пользователя из БД, а не из формы
                             $this->projectService->addParticipant($project, $user, $user->role);
                         }
                     }
