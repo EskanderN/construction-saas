@@ -371,25 +371,92 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             @foreach($project->participants as $participant)
-                <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
-                    <div>
-                        <p class="font-medium">{{ $participant->name }}</p>
-                        <p class="text-sm text-gray-600">{{ $participant->pivot->role }}</p>
+                @php
+                    // Определяем, является ли участник ключевой ролью (нельзя удалить)
+                    $isKeyRole = in_array($participant->pivot->role, [
+                        'director', 
+                        'deputy_director', 
+                        'pto', 
+                        'supply'
+                    ]);
+                    
+                    // Определяем иконку для роли
+                    $roleIcon = match($participant->pivot->role) {
+                        'director' => '👑',
+                        'deputy_director' => '⭐',
+                        'pto' => '📐',
+                        'supply' => '📦',
+                        'project_manager' => '📋',
+                        'site_manager' => '🔧',
+                        'accountant' => '💰',
+                        default => '👤'
+                    };
+                    
+                    // Цвет для роли
+                    $roleColor = match($participant->pivot->role) {
+                        'director' => 'bg-purple-100 text-purple-800',
+                        'deputy_director' => 'bg-indigo-100 text-indigo-800',
+                        'pto' => 'bg-blue-100 text-blue-800',
+                        'supply' => 'bg-green-100 text-green-800',
+                        'project_manager' => 'bg-yellow-100 text-yellow-800',
+                        'site_manager' => 'bg-orange-100 text-orange-800',
+                        'accountant' => 'bg-emerald-100 text-emerald-800',
+                        default => 'bg-gray-100 text-gray-800'
+                    };
+                @endphp
+                
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-sm transition">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-sm shadow-sm">
+                            <span class="text-white">{{ $roleIcon }}</span>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-800">
+                                {{ $participant->name }}
+                                @if($isKeyRole)
+                                    <span class="ml-2 text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full">ключевая роль</span>
+                                @endif
+                            </p>
+                            <p class="text-xs mt-0.5">
+                                <span class="px-2 py-0.5 rounded-full {{ $roleColor }}">{{ $participant->pivot->role }}</span>
+                            </p>
+                        </div>
                     </div>
                     
                     @can('manageParticipants', $project)
-                        @if(!$participant->isDeputyDirector())
-                            <form method="POST" action="{{ route('projects.participants.remove', [$project, $participant]) }}">
+                        @if(!$isKeyRole)
+                            <form method="POST" action="{{ route('projects.participants.remove', [$project, $participant]) }}" 
+                                onsubmit="return confirm('Удалить участника из проекта?')">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-800 text-sm">
+                                <button type="submit" class="text-red-600 hover:text-red-800 text-sm flex items-center px-2 py-1 hover:bg-red-50 rounded transition">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
                                     Удалить
                                 </button>
                             </form>
+                        @else
+                            <span class="text-gray-400 text-sm px-2 py-1" title="Эту роль нельзя удалить">
+                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                обязательный
+                            </span>
                         @endif
                     @endcan
                 </div>
             @endforeach
+        </div>
+        
+        <!-- Подсказка о ключевых ролях -->
+        <div class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <p class="text-xs text-blue-700 flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Директор, зам.директора, ПТО и снабжение - обязательные участники проекта. Их нельзя удалить.
+            </p>
         </div>
     </div>
 

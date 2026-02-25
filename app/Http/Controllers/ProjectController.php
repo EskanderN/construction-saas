@@ -276,6 +276,17 @@ class ProjectController extends Controller
     public function removeParticipant(Project $project, User $user)
     {
         $this->authorize('manageParticipants', $project);
+        
+        // Запрещаем удаление ключевых ролей
+        $keyRoles = ['director', 'deputy_director', 'pto', 'supply'];
+        $participantRole = $project->participants()
+            ->where('user_id', $user->id)
+            ->first()
+            ->pivot->role ?? null;
+        
+        if (in_array($participantRole, $keyRoles)) {
+            return back()->with('error', 'Нельзя удалить обязательного участника проекта');
+        }
 
         try {
             $this->projectService->removeParticipant($project, $user);
