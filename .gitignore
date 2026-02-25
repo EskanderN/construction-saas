@@ -1,0 +1,61 @@
+# Laravel specific
+/vendor/
+node_modules/
+.env
+.env.*
+!.env.example
+storage/
+public/storage
+public/hot
+public/build
+bootstrap/cache/
+storage/*.key
+.phpunit.result.cache
+.phpunit.cache
+Homestead.json
+Homestead.yaml
+.env
+.env.backup
+.phpunit.result.cache
+.php_cs.cache
+auth.json
+
+# IDE
+/.idea/
+/.vscode/
+*.sublime-project
+*.sublime-workspace
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+/phpunit.xml
+
+# Packages
+/node_modules/
+/jspm_packages/
+/package-lock.json
+/yarn.lock
+
+# Uploads
+/public/uploads/*
+/storage/app/public/*
+!storage/app/public/.gitkeep
+/public/storage
+
+# Composer
+/composer.lock
+
+# Docker
+/docker-compose.override.yml
