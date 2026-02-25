@@ -15,13 +15,17 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('status')->default('created');
             $table->foreignId('created_by')->constrained('users');
+            
+            // Новые поля для раздельной работы ПТО и Снабжения
+            // УБИРАЕМ "after" - в CREATE TABLE это не нужно
+            $table->boolean('pto_approved')->nullable();
+            $table->boolean('supply_approved')->nullable();
+            $table->text('pto_comment')->nullable();
+            $table->text('supply_comment')->nullable();
+            $table->timestamp('pto_submitted_at')->nullable();
+            $table->timestamp('supply_submitted_at')->nullable();
+            
             $table->timestamps();
-            $table->boolean('pto_approved')->nullable()->after('status');
-            $table->boolean('supply_approved')->nullable()->after('pto_approved');
-            $table->text('pto_comment')->nullable()->after('supply_approved');
-            $table->text('supply_comment')->nullable()->after('pto_comment');
-            $table->timestamp('pto_submitted_at')->nullable()->after('supply_comment');
-            $table->timestamp('supply_submitted_at')->nullable()->after('pto_submitted_at');
         });
     }
 
