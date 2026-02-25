@@ -4,33 +4,79 @@
         $user = $userFiles->first()->user;
         $totalSize = $userFiles->sum('file_size');
         $fileCount = $userFiles->count();
+        
+        // Определяем иконку для пользователя в зависимости от роли
+        $userIcon = match($user->role) {
+            'director' => '👑',
+            'deputy_director' => '⭐',
+            'pto' => '📐',
+            'supply' => '📦',
+            'project_manager' => '📋',
+            'site_manager' => '🔧',
+            'accountant' => '💰',
+            default => '👤'
+        };
+        
+        // Цвет для роли
+        $roleColor = match($user->role) {
+            'director' => 'bg-purple-100 text-purple-800',
+            'deputy_director' => 'bg-indigo-100 text-indigo-800',
+            'pto' => 'bg-blue-100 text-blue-800',
+            'supply' => 'bg-green-100 text-green-800',
+            'project_manager' => 'bg-yellow-100 text-yellow-800',
+            'site_manager' => 'bg-orange-100 text-orange-800',
+            'accountant' => 'bg-emerald-100 text-emerald-800',
+            default => 'bg-gray-100 text-gray-800'
+        };
     @endphp
     
-    <div class="border rounded-lg overflow-hidden">
-        <!-- Заголовок пользователя -->
-        <div class="bg-gray-100 px-4 py-3 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                    {{ strtoupper(substr($user->name, 0, 1)) }}
+    <div class="border rounded-xl overflow-hidden transition-all hover:shadow-lg bg-white file-group" data-user="{{ $user->id }}">
+        <!-- Заголовок пользователя с улучшенным дизайном -->
+        <div class="bg-gradient-to-r from-gray-50 to-white px-5 py-4 border-b flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-2xl shadow-md">
+                    <span class="text-white">{{ $userIcon }}</span>
                 </div>
                 <div>
-                    <h4 class="font-semibold">{{ $user->name }}</h4>
-                    <p class="text-xs text-gray-600">
-                        {{ $user->role }} • 
-                        {{ $fileCount }} {{ $fileCount == 1 ? 'файл' : ($fileCount < 5 ? 'файла' : 'файлов') }} • 
-                        {{ $totalSize > 1048576 ? round($totalSize / 1048576, 2) . ' MB' : round($totalSize / 1024, 2) . ' KB' }}
-                    </p>
+                    <div class="flex items-center space-x-2">
+                        <h4 class="font-bold text-gray-800">{{ $user->name }}</h4>
+                        <span class="px-2 py-0.5 text-xs rounded-full {{ $roleColor }}">{{ $user->role }}</span>
+                    </div>
+                    <div class="flex items-center space-x-3 text-xs text-gray-500 mt-1">
+                        <span class="flex items-center">
+                            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            {{ $fileCount }} {{ $fileCount == 1 ? 'файл' : ($fileCount < 5 ? 'файла' : 'файлов') }}
+                        </span>
+                        <span class="flex items-center">
+                            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4m16 0a8 8 0 01-8 8m8-8a8 8 0 00-8-8"></path>
+                            </svg>
+                            {{ $totalSize > 1048576 ? round($totalSize / 1048576, 2) . ' MB' : round($totalSize / 1024, 2) . ' KB' }}
+                        </span>
+                    </div>
                 </div>
             </div>
+            
+            <!-- Кнопка свернуть/развернуть -->
+            <button onclick="toggleUserFiles({{ $user->id }})" class="text-gray-400 hover:text-gray-600 transition">
+                <svg class="w-6 h-6 transform transition-transform duration-200" id="arrow-{{ $user->id }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
         </div>
 
-        <!-- Список файлов пользователя -->
-        <div class="bg-white divide-y divide-gray-200">
-            @foreach($userFiles as $file)
-                <div class="p-4 hover:bg-gray-50 transition" id="file-{{ $file->id }}">
+        <!-- Список файлов пользователя (можно сворачивать) -->
+        <div id="files-{{ $user->id }}" class="bg-white divide-y divide-gray-100">
+            @foreach($userFiles->sortByDesc('created_at') as $file)
+                <div class="p-4 hover:bg-gray-50 transition file-item" 
+                     data-filename="{{ strtolower($file->file_name) }}"
+                     data-date="{{ $file->created_at ? $file->created_at->timestamp : 0 }}"
+                     data-size="{{ $file->file_size }}">
                     <div class="flex items-start space-x-4">
-                        <!-- Иконка -->
-                        <span class="text-3xl">
+                        <!-- Улучшенные иконки для разных типов файлов -->
+                        <span class="text-3xl transform hover:scale-110 transition-transform">
                             @php
                                 $ext = strtolower(pathinfo($file->file_name, PATHINFO_EXTENSION));
                                 echo match($ext) {
@@ -40,46 +86,97 @@
                                     'jpg', 'jpeg', 'png', 'gif', 'bmp' => '🖼️',
                                     'zip', 'rar', '7z' => '🗜️',
                                     'txt', 'md' => '📄',
+                                    'dwg', 'dxf' => '📐',
+                                    'exe' => '⚙️',
                                     default => '📎'
                                 };
                             @endphp
                         </span>
                         
-                        <div class="flex-1">
+                        <div class="flex-1 min-w-0">
                             <div class="flex items-center flex-wrap gap-2">
                                 <a href="{{ Storage::url($file->file_path) }}" 
                                    target="_blank" 
-                                   class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                                   class="text-blue-600 hover:text-blue-800 hover:underline font-medium text-lg truncate max-w-md">
                                     {{ $file->file_name }}
                                 </a>
-                                <span class="text-xs px-2 py-1 bg-gray-200 rounded-full">
-                                    @switch($file->section)
-                                        @case('general') Общий @break
-                                        @case('pto') ПТО @break
-                                        @case('supply') Снабжение @break
-                                        @default {{ $file->section }}
-                                    @endswitch
-                                </span>
+                                <div class="flex items-center space-x-1">
+                                    <span class="text-xs px-2 py-1 rounded-full 
+                                        @if($file->section === 'pto') bg-blue-100 text-blue-700
+                                        @elseif($file->section === 'supply') bg-green-100 text-green-700
+                                        @else bg-gray-100 text-gray-700
+                                        @endif">
+                                        @switch($file->section)
+                                            @case('general') 📁 Общий @break
+                                            @case('pto') 📐 ПТО @break
+                                            @case('supply') 📦 Снабжение @break
+                                            @default {{ $file->section }}
+                                        @endswitch
+                                    </span>
+                                    
+                                    <!-- Метка для расчетных файлов -->
+                                    @if(in_array($file->section, ['pto', 'supply']))
+                                        <span class="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">
+                                            ⚡ Расчетный
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
-                            <div class="flex items-center space-x-4 text-xs text-gray-500 mt-2">
-                                <span>Загружен: {{ $file->created_at ? \Carbon\Carbon::parse($file->created_at)->format('d.m.Y H:i') : '' }}</span>
-                                <span>Размер: {{ round($file->file_size / 1024, 2) }} KB</span>
+                            
+                            <div class="flex items-center space-x-6 text-xs text-gray-500 mt-2">
+                                <span class="flex items-center">
+                                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    {{ $file->created_at ? \Carbon\Carbon::parse($file->created_at)->format('d.m.Y H:i') : '' }}
+                                </span>
+                                <span class="flex items-center">
+                                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z"></path>
+                                    </svg>
+                                    {{ $file->file_size > 1048576 ? round($file->file_size / 1048576, 2) . ' MB' : round($file->file_size / 1024, 2) . ' KB' }}
+                                </span>
+                                @if($file->user)
+                                    <span class="flex items-center">
+                                        <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                        </svg>
+                                        {{ $file->user->name }}
+                                    </span>
+                                @endif
                             </div>
                         </div>
 
                         <div class="flex items-center space-x-2">
+                            <!-- Кнопка просмотра -->
                             <a href="{{ Storage::url($file->file_path) }}" 
-                               download="{{ $file->file_name }}"
-                               class="text-gray-600 hover:text-gray-800 p-2 hover:bg-gray-100 rounded-full"
-                               title="Скачать">
-                                ⬇️
+                               target="_blank"
+                               class="text-gray-600 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition group"
+                               title="Просмотр">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
                             </a>
                             
+                            <!-- Кнопка скачивания -->
+                            <a href="{{ Storage::url($file->file_path) }}" 
+                               download="{{ $file->file_name }}"
+                               class="text-gray-600 hover:text-green-600 p-2 hover:bg-green-50 rounded-lg transition group"
+                               title="Скачать">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                </svg>
+                            </a>
+                            
+                            <!-- Кнопка удаления (только для авторизованных) -->
                             @can('manageParticipants', $project)
                                 <button onclick="deleteFile({{ $file->id }})" 
-                                        class="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-full" 
+                                        class="text-gray-600 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition group"
                                         title="Удалить">
-                                    🗑️
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
                                 </button>
                             @endcan
                         </div>
@@ -89,9 +186,12 @@
         </div>
     </div>
 @empty
-    <div class="text-center py-12 bg-gray-50 rounded-lg">
-        <div class="text-6xl mb-4">📁</div>
-        <h3 class="text-lg font-medium text-gray-900">Нет файлов</h3>
-        <p class="text-gray-500">В этом разделе нет файлов</p>
+    <div class="text-center py-16 bg-gradient-to-b from-gray-50 to-white rounded-2xl border-2 border-dashed border-gray-300">
+        <div class="text-7xl mb-4 animate-bounce">📁</div>
+        <h3 class="text-2xl font-medium text-gray-900 mb-2">Нет файлов</h3>
+        <p class="text-gray-500 text-lg">В этом разделе пока нет файлов</p>
+        @if(Auth::user()->can('uploadPTOFiles', $project) || Auth::user()->can('uploadSupplyFiles', $project))
+            <p class="text-sm text-gray-400 mt-4">Загрузите файлы используя формы выше</p>
+        @endif
     </div>
 @endforelse

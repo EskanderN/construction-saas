@@ -904,29 +904,67 @@
 
         <!-- Файлы -->
         <div id="files-tab" class="tab-content p-6">
-            <!-- Фильтры -->
-            <div class="mb-6 flex flex-wrap gap-2 border-b pb-4">
-                <button onclick="filterFiles('all')" 
-                        class="filter-btn px-4 py-2 rounded-md text-sm font-medium bg-blue-500 text-white">
-                    Все файлы
-                </button>
-                <button onclick="filterFiles('general')" 
-                        class="filter-btn px-4 py-2 rounded-md text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">
-                    Общий
-                </button>
-                <button onclick="filterFiles('pto')" 
-                        class="filter-btn px-4 py-2 rounded-md text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">
-                    ПТО
-                </button>
-                <button onclick="filterFiles('supply')" 
-                        class="filter-btn px-4 py-2 rounded-md text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">
-                    Снабжение
-                </button>
+            <!-- Панель инструментов -->
+            <div class="mb-6 bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center space-x-4">
+                        <h3 class="text-lg font-semibold text-gray-800">📁 Файлы проекта</h3>
+                        
+                        <!-- Фильтры в виде красивых кнопок -->
+                        <div class="flex bg-gray-100 rounded-lg p-1">
+                            <button onclick="filterFiles('all')" 
+                                    class="filter-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 
+                                        @if(request('filter', 'all') == 'all') bg-blue-500 text-white shadow-md @else text-gray-700 hover:bg-gray-200 @endif">
+                                Все
+                            </button>
+                            <button onclick="filterFiles('general')" 
+                                    class="filter-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
+                                        @if(request('filter') == 'general') bg-blue-500 text-white shadow-md @else text-gray-700 hover:bg-gray-200 @endif">
+                                Общие
+                            </button>
+                            <button onclick="filterFiles('pto')" 
+                                    class="filter-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
+                                        @if(request('filter') == 'pto') bg-blue-500 text-white shadow-md @else text-gray-700 hover:bg-gray-200 @endif">
+                                ПТО
+                            </button>
+                            <button onclick="filterFiles('supply')" 
+                                    class="filter-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
+                                        @if(request('filter') == 'supply') bg-blue-500 text-white shadow-md @else text-gray-700 hover:bg-gray-200 @endif">
+                                Снабжение
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Поиск и сортировка -->
+                    <div class="flex items-center space-x-2">
+                        <div class="relative">
+                            <input type="text" 
+                                id="file-search" 
+                                placeholder="Поиск файлов..." 
+                                class="pl-8 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <svg class="absolute left-2 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        
+                        <select id="sort-files" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+                            <option value="date_desc">Сначала новые</option>
+                            <option value="date_asc">Сначала старые</option>
+                            <option value="name_asc">По имени (А-Я)</option>
+                            <option value="name_desc">По имени (Я-А)</option>
+                            <option value="size_desc">По размеру (сначала большие)</option>
+                            <option value="size_asc">По размеру (сначала маленькие)</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <!-- Список файлов -->
             <div id="files-list" class="space-y-4">
-                @include('projects.partials.files-list', ['filesByUser' => $project->files->groupBy('user_id'), 'project' => $project])
+                @include('projects.partials.files-list', [
+                    'filesByUser' => $project->files->groupBy('user_id'), 
+                    'project' => $project
+                ])
             </div>
         </div>
 
@@ -1455,5 +1493,174 @@ function setupDragAndDrop(dropZone, inputId) {
         input.dispatchEvent(event);
     }
 }
+</script>
+
+<script>
+// Переменные для хранения всех файловых элементов
+let allFileItems = [];
+let currentFilter = 'all';
+
+// Функция для фильтрации файлов
+function filterFiles(filter) {
+    currentFilter = filter;
+    
+    // Обновляем стили кнопок
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-500', 'text-white', 'shadow-md');
+        btn.classList.add('text-gray-700', 'hover:bg-gray-200');
+    });
+    event.target.classList.remove('text-gray-700', 'hover:bg-gray-200');
+    event.target.classList.add('bg-blue-500', 'text-white', 'shadow-md');
+    
+    // Применяем фильтр
+    applyFilters();
+}
+
+// Функция поиска
+document.getElementById('file-search')?.addEventListener('input', function(e) {
+    applyFilters();
+});
+
+// Функция сортировки
+document.getElementById('sort-files')?.addEventListener('change', function(e) {
+    applyFilters();
+});
+
+// Основная функция применения всех фильтров
+function applyFilters() {
+    const searchTerm = document.getElementById('file-search')?.value.toLowerCase() || '';
+    const sortBy = document.getElementById('sort-files')?.value || 'date_desc';
+    
+    // Получаем все группы файлов
+    const groups = document.querySelectorAll('.file-group');
+    
+    groups.forEach(group => {
+        const files = group.querySelectorAll('.file-item');
+        let visibleCount = 0;
+        
+        files.forEach(file => {
+            const fileName = file.dataset.filename || '';
+            const fileSection = file.querySelector('.text-xs.px-2.py-1').textContent.includes('ПТО') ? 'pto' : 
+                               (file.querySelector('.text-xs.px-2.py-1').textContent.includes('Снабжение') ? 'supply' : 'general');
+            
+            // Проверяем фильтр
+            const matchesFilter = currentFilter === 'all' || fileSection === currentFilter;
+            
+            // Проверяем поиск
+            const matchesSearch = fileName.includes(searchTerm);
+            
+            if (matchesFilter && matchesSearch) {
+                file.style.display = '';
+                visibleCount++;
+            } else {
+                file.style.display = 'none';
+            }
+        });
+        
+        // Скрываем группу, если в ней нет видимых файлов
+        if (visibleCount === 0) {
+            group.style.display = 'none';
+        } else {
+            group.style.display = '';
+        }
+    });
+    
+    // Применяем сортировку
+    sortFiles(sortBy);
+}
+
+// Функция сортировки файлов
+function sortFiles(sortBy) {
+    const groups = document.querySelectorAll('.file-group');
+    
+    groups.forEach(group => {
+        const filesContainer = group.querySelector('[id^="files-"]');
+        const files = Array.from(filesContainer.querySelectorAll('.file-item'));
+        
+        files.sort((a, b) => {
+            const aVal = a.dataset[sortBy.split('_')[0]];
+            const bVal = b.dataset[sortBy.split('_')[0]];
+            const order = sortBy.split('_')[1] === 'asc' ? 1 : -1;
+            
+            if (sortBy.startsWith('name')) {
+                return order * aVal.localeCompare(bVal);
+            } else {
+                return order * (parseInt(aVal) - parseInt(bVal));
+            }
+        });
+        
+        // Переставляем элементы
+        files.forEach(file => filesContainer.appendChild(file));
+    });
+}
+
+// Функция для сворачивания/разворачивания файлов пользователя
+function toggleUserFiles(userId) {
+    const filesDiv = document.getElementById(`files-${userId}`);
+    const arrow = document.getElementById(`arrow-${userId}`);
+    
+    if (filesDiv.style.display === 'none') {
+        filesDiv.style.display = '';
+        arrow.style.transform = 'rotate(0deg)';
+    } else {
+        filesDiv.style.display = 'none';
+        arrow.style.transform = 'rotate(-90deg)';
+    }
+}
+
+// Функция удаления файла
+function deleteFile(fileId) {
+    if (!confirm('Удалить этот файл?')) return;
+    
+    const projectId = {{ $project->id }};
+    
+    fetch(`/projects/${projectId}/files/${fileId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const fileElement = document.getElementById(`file-${fileId}`);
+            if (fileElement) {
+                const group = fileElement.closest('.file-group');
+                fileElement.remove();
+                
+                // Если в группе не осталось файлов, обновляем счетчик или удаляем группу
+                const remainingFiles = group.querySelectorAll('.file-item').length;
+                if (remainingFiles === 0) {
+                    group.remove();
+                }
+            }
+        }
+    });
+}
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    // Собираем данные о файлах
+    document.querySelectorAll('.file-item').forEach(file => {
+        allFileItems.push({
+            element: file,
+            filename: file.dataset.filename || '',
+            date: parseInt(file.dataset.date) || 0,
+            size: parseInt(file.dataset.size) || 0
+        });
+    });
+    
+    // Добавляем поддержку Enter в поиске
+    const searchInput = document.getElementById('file-search');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyFilters();
+            }
+        });
+    }
+});
 </script>
 @endsection
