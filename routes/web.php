@@ -78,4 +78,7 @@ Route::middleware(['auth', 'tenant'])->group(function () {
     
     // Комментарии к задачам
     Route::post('/tasks/{task}/comments', [App\Http\Controllers\TaskCommentController::class, 'store'])->name('tasks.comments');
+
+    // Возврат проекта на доработку
+    Route::post('/projects/{project}/rework', [ProjectController::class, 'rework'])->name('projects.rework');
 });

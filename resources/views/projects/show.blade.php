@@ -99,6 +99,12 @@
             $bothApproved = $ptoApproved && $supplyApproved;
             $anyRejected = $ptoRejected || $supplyRejected;
             $allSubmitted = $ptoReady && $supplyReady;
+            
+            // Проверяем статус проекта
+            $isInProgress = $project->status === 'in_progress';
+            $isOnRevision = $project->status === 'on_revision';
+            $isApproved = $project->status === 'approved';
+            $isOnApproval = $project->status === 'on_approval';
         @endphp
         
         <div class="bg-white rounded-xl shadow-lg p-6">
@@ -447,33 +453,33 @@
                         </div>
                     @endif
                     
-                    <!-- Кнопка отправки на проверку -->
-                    @can('submitPTO', $project)
-                        @if($userFiles->count() > 0 && !$isSubmitted)
-                            <div class="mt-6 p-5 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border-2 border-yellow-200">
-                                <h3 class="font-semibold text-yellow-800 mb-3 flex items-center">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                    </svg>
-                                    {{ $isRejected ? 'Отправить исправленные расчеты' : 'Отправить на проверку' }}
-                                </h3>
-                                <form method="POST" action="{{ route('projects.submit-pto', $project) }}">
+                    <!-- Кнопка отправки на общее согласование (только для директора, если проект утвержден отделами и еще не на согласовании) -->
+                    @can('manageParticipants', $project)
+                        @if($ptoApproved && $supplyApproved && $project->status === 'approved')
+                            <div class="mt-6 pt-4 border-t">
+                                <form method="POST" action="{{ route('projects.send-to-approval', $project) }}">
                                     @csrf
-                                    <div class="space-y-4">
-                                        <textarea name="comment" rows="3" required 
-                                                class="w-full border-2 border-yellow-200 rounded-lg p-3 focus:border-yellow-400 focus:ring focus:ring-yellow-200" 
-                                                placeholder="{{ $isRejected ? 'Опишите что исправили...' : 'Опишите что за расчеты, на что обратить внимание...' }}"></textarea>
-                                        <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-lg font-medium transition flex items-center justify-center">
-                                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                            </svg>
-                                            {{ $isRejected ? 'Отправить исправленные расчеты' : 'Отправить на проверку' }}
-                                        </button>
-                                    </div>
+                                    <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg transition flex items-center justify-center">
+                                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        Оба отдела утверждены → Отправить на общее согласование
+                                    </button>
                                 </form>
-                                <p class="text-xs text-gray-500 mt-3 text-center">
-                                    После отправки вы не сможете изменять файлы до решения директора
-                                </p>
+                            </div>
+                        @endif
+                    @endcan
+
+                    <!-- Кнопка возврата проекта из реализации в доработку (только для директора) -->
+                    @can('manageParticipants', $project)
+                        @if($project->status === 'in_progress')
+                            <div class="mt-6 pt-4 border-t">
+                                <button onclick="openReworkModal()" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg transition flex items-center justify-center">
+                                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                    </svg>
+                                    Вернуть проект на доработку
+                                </button>
                             </div>
                         @endif
                     @endcan
@@ -794,8 +800,7 @@
         </div>
     @endif
 
-    <!-- Вкладки для остальных пользователей -->
-    @if(!in_array(Auth::user()->role, ['pto', 'supply']))
+    <!-- Вкладки для всех пользователей -->
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
         <div class="border-b border-gray-200">
             <nav class="flex -mb-px">
@@ -820,139 +825,31 @@
             </nav>
         </div>
 
-        <!-- Файлы (для директора и других) -->
+        <!-- Файлы -->
         <div id="files-tab" class="tab-content p-6">
             <!-- Фильтры -->
             <div class="mb-6 flex flex-wrap gap-2 border-b pb-4">
-                <a href="{{ route('projects.show', ['project' => $project, 'filter' => 'all']) }}" 
-                   class="px-4 py-2 rounded-md text-sm font-medium {{ request('filter', 'all') == 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                <button onclick="filterFiles('all')" 
+                        class="filter-btn px-4 py-2 rounded-md text-sm font-medium bg-blue-500 text-white">
                     Все файлы
-                </a>
-                <a href="{{ route('projects.show', ['project' => $project, 'filter' => 'general']) }}" 
-                   class="px-4 py-2 rounded-md text-sm font-medium {{ request('filter') == 'general' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                </button>
+                <button onclick="filterFiles('general')" 
+                        class="filter-btn px-4 py-2 rounded-md text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">
                     Общий
-                </a>
-                <a href="{{ route('projects.show', ['project' => $project, 'filter' => 'pto']) }}" 
-                   class="px-4 py-2 rounded-md text-sm font-medium {{ request('filter') == 'pto' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                </button>
+                <button onclick="filterFiles('pto')" 
+                        class="filter-btn px-4 py-2 rounded-md text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">
                     ПТО
-                </a>
-                <a href="{{ route('projects.show', ['project' => $project, 'filter' => 'supply']) }}" 
-                   class="px-4 py-2 rounded-md text-sm font-medium {{ request('filter') == 'supply' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}">
+                </button>
+                <button onclick="filterFiles('supply')" 
+                        class="filter-btn px-4 py-2 rounded-md text-sm font-medium bg-gray-200 text-gray-700 hover:bg-gray-300">
                     Снабжение
-                </a>
+                </button>
             </div>
 
             <!-- Список файлов -->
-            <div class="space-y-4">
-                @php
-                    $filter = request('filter', 'all');
-                    $files = $project->files;
-                    if ($filter != 'all') {
-                        $files = $files->where('section', $filter);
-                    }
-                    $sortedFiles = $files->sortByDesc('created_at');
-                    $filesByUser = $sortedFiles->groupBy('user_id');
-                @endphp
-
-                @forelse($filesByUser as $userId => $userFiles)
-                    @php
-                        $user = $userFiles->first()->user;
-                        $totalSize = $userFiles->sum('file_size');
-                        $fileCount = $userFiles->count();
-                    @endphp
-                    
-                    <div class="border rounded-lg overflow-hidden">
-                        <!-- Заголовок пользователя -->
-                        <div class="bg-gray-100 px-4 py-3 flex items-center justify-between">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                                    {{ strtoupper(substr($user->name, 0, 1)) }}
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold">{{ $user->name }}</h4>
-                                    <p class="text-xs text-gray-600">
-                                        {{ $user->role }} • 
-                                        {{ $fileCount }} {{ $fileCount == 1 ? 'файл' : ($fileCount < 5 ? 'файла' : 'файлов') }} • 
-                                        {{ $totalSize > 1048576 ? round($totalSize / 1048576, 2) . ' MB' : round($totalSize / 1024, 2) . ' KB' }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Список файлов пользователя -->
-                        <div class="bg-white divide-y divide-gray-200">
-                            @foreach($userFiles as $file)
-                                <div class="p-4 hover:bg-gray-50 transition">
-                                    <div class="flex items-start space-x-4">
-                                        <!-- Иконка -->
-                                        <span class="text-3xl">
-                                            @php
-                                                $ext = strtolower(pathinfo($file->file_name, PATHINFO_EXTENSION));
-                                                echo match($ext) {
-                                                    'pdf' => '📕',
-                                                    'doc', 'docx' => '📘',
-                                                    'xls', 'xlsx', 'csv' => '📊',
-                                                    'jpg', 'jpeg', 'png', 'gif', 'bmp' => '🖼️',
-                                                    'zip', 'rar', '7z' => '🗜️',
-                                                    'txt', 'md' => '📄',
-                                                    default => '📎'
-                                                };
-                                            @endphp
-                                        </span>
-                                        
-                                        <div class="flex-1">
-                                            <div class="flex items-center flex-wrap gap-2">
-                                                <a href="{{ Storage::url($file->file_path) }}" 
-                                                   target="_blank" 
-                                                   class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
-                                                    {{ $file->file_name }}
-                                                </a>
-                                                <span class="text-xs px-2 py-1 bg-gray-200 rounded-full">
-                                                    @switch($file->section)
-                                                        @case('general') Общий @break
-                                                        @case('pto') ПТО @break
-                                                        @case('supply') Снабжение @break
-                                                        @default {{ $file->section }}
-                                                    @endswitch
-                                                </span>
-                                            </div>
-                                            <div class="flex items-center space-x-4 text-xs text-gray-500 mt-2">
-                                                <span>Загружен: {{ $file->created_at ? \Carbon\Carbon::parse($file->created_at)->format('d.m.Y H:i') : '' }}</span>
-                                                <span>Размер: {{ round($file->file_size / 1024, 2) }} KB</span>
-                                            </div>
-                                        </div>
-
-                                        <div class="flex items-center space-x-2">
-                                            <a href="{{ Storage::url($file->file_path) }}" 
-                                               download="{{ $file->file_name }}"
-                                               class="text-gray-600 hover:text-gray-800 p-2 hover:bg-gray-100 rounded-full"
-                                               title="Скачать">
-                                                ⬇️
-                                            </a>
-                                            
-                                            @can('manageParticipants', $project)
-                                                <form method="POST" action="{{ route('projects.files.delete', [$project, $file]) }}"
-                                                      onsubmit="return confirm('Удалить этот файл?')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-full" title="Удалить">
-                                                        🗑️
-                                                    </button>
-                                                </form>
-                                            @endcan
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @empty
-                    <div class="text-center py-12 bg-gray-50 rounded-lg">
-                        <div class="text-6xl mb-4">📁</div>
-                        <h3 class="text-lg font-medium text-gray-900">Нет файлов</h3>
-                        <p class="text-gray-500">В этом разделе нет файлов</p>
-                    </div>
-                @endforelse
+            <div id="files-list" class="space-y-4">
+                @include('projects.partials.files-list', ['filesByUser' => $project->files->groupBy('user_id'), 'project' => $project])
             </div>
         </div>
 
@@ -1153,8 +1050,6 @@
             </div>
         </div>
     </div>
-    @endif
-</div>
 
 <!-- Модальное окно для утверждения проекта -->
 <div id="approveModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center">

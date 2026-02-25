@@ -670,4 +670,43 @@ class ProjectController extends Controller
         
         return redirect()->back()->with('success', 'Снабжение отправлено на доработку');
     }
+
+        /**
+     * Возврат проекта из реализации на доработку
+     */
+    public function rework(Request $request, Project $project)
+    {
+        $this->authorize('manageParticipants', $project);
+        
+        $request->validate([
+            'comment' => 'required|string|max:1000',
+        ]);
+        
+        // Меняем статус проекта
+        $project->status = 'on_revision';
+        
+        // Сбрасываем статусы утверждения отделов
+        $project->pto_approved = null;
+        $project->supply_approved = null;
+        $project->pto_submitted_at = null;
+        $project->supply_submitted_at = null;
+        $project->save();
+        
+        // Добавляем комментарий в историю
+        $project->statusLogs()->create([
+            'user_id' => Auth::id(),
+            'old_status' => 'in_progress',
+            'new_status' => 'on_revision',
+            'comment' => 'Проект возвращен на доработку: ' . $request->comment
+        ]);
+        
+        Log::info('Проект возвращен на доработку', [
+            'project_id' => $project->id,
+            'user_id' => Auth::id(),
+            'comment' => $request->comment
+        ]);
+        
+        return redirect()->route('projects.show', $project)
+            ->with('success', 'Проект возвращен на доработку');
+    }
 }
