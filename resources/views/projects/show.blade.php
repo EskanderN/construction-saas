@@ -3,353 +3,255 @@
 @section('title', $project->name)
 
 @section('content')
-<div class="space-y-6">
-    <!-- Заголовок и действия - только для директора и замдиректора -->
-    <div class="flex justify-between items-start">
+@php
+    use Carbon\Carbon;
+
+    $statusMap = [
+        'created'        => ['label' => 'Создан',            'dot' => 'bg-gray-400',   'badge' => 'bg-gray-100 text-gray-700'],
+        'in_calculation' => ['label' => 'В расчёте',         'dot' => 'bg-blue-500',   'badge' => 'bg-blue-50 text-blue-700'],
+        'on_approval'    => ['label' => 'На согласовании',   'dot' => 'bg-amber-500',  'badge' => 'bg-amber-50 text-amber-700'],
+        'on_revision'    => ['label' => 'На доработке',      'dot' => 'bg-orange-500', 'badge' => 'bg-orange-50 text-orange-700'],
+        'approved'       => ['label' => 'Утверждён',         'dot' => 'bg-green-500',  'badge' => 'bg-green-50 text-green-700'],
+        'in_progress'    => ['label' => 'В реализации',      'dot' => 'bg-violet-500', 'badge' => 'bg-violet-50 text-violet-700'],
+        'completed'      => ['label' => 'Завершён',          'dot' => 'bg-cyan-500',   'badge' => 'bg-cyan-50 text-cyan-700'],
+    ];
+    $st = $statusMap[$project->status] ?? ['label' => $project->status, 'dot' => 'bg-gray-400', 'badge' => 'bg-gray-100 text-gray-700'];
+
+    $roleLabels = ['director'=>'Директор','deputy_director'=>'Зам. директора','pto'=>'ПТО','supply'=>'Снабжение','project_manager'=>'Рук. проекта','site_manager'=>'Прораб','accountant'=>'Бухгалтер'];
+    $roleBadge  = ['director'=>'bg-violet-100 text-violet-700','deputy_director'=>'bg-indigo-100 text-indigo-700','pto'=>'bg-blue-100 text-blue-700','supply'=>'bg-green-100 text-green-700','project_manager'=>'bg-amber-100 text-amber-700','site_manager'=>'bg-orange-100 text-orange-700','accountant'=>'bg-emerald-100 text-emerald-700'];
+    $roleAvatar = $roleBadge;
+@endphp
+
+<div class="max-w-4xl mx-auto space-y-5">
+
+    {{-- HEADER --}}
+    <div class="flex items-start justify-between gap-4 flex-wrap">
         <div>
-            <h1 class="text-3xl font-bold">{{ $project->name }}</h1>
-            <p class="text-gray-600 mt-2">{{ $project->description }}</p>
+            <div class="flex items-center gap-2 mb-2 text-sm text-gray-400">
+                <a href="{{ route('projects.index') }}" class="hover:text-gray-600 flex items-center gap-1 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                    Проекты
+                </a>
+                <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+                <span class="text-gray-500">{{ Str::limit($project->name, 40) }}</span>
+            </div>
+            <h1 class="text-2xl font-extrabold text-gray-900 leading-tight">{{ $project->name }}</h1>
+            @if($project->description)
+                <p class="mt-1 text-sm text-gray-500">{{ $project->description }}</p>
+            @endif
         </div>
-        
-        <div class="flex space-x-2">
+        <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold {{ $st['badge'] }}">
+                <span class="w-1.5 h-1.5 rounded-full {{ $st['dot'] }}"></span>
+                {{ $st['label'] }}
+            </span>
             @can('update', $project)
-                <a href="{{ route('projects.edit', $project) }}" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">
+                <a href="{{ route('projects.edit', $project) }}"
+                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     Редактировать
                 </a>
             @endcan
         </div>
     </div>
 
-    <!-- Статус проекта -->
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <h2 class="text-lg font-semibold mb-2">Статус проекта</h2>
-                <span class="px-3 py-1 text-sm rounded-full 
-                    @if($project->status === 'created') bg-gray-100 text-gray-800
-                    @elseif($project->status === 'in_calculation') bg-blue-100 text-blue-800
-                    @elseif($project->status === 'on_approval') bg-yellow-100 text-yellow-800
-                    @elseif($project->status === 'on_revision') bg-orange-100 text-orange-800
-                    @elseif($project->status === 'approved') bg-green-100 text-green-800
-                    @elseif($project->status === 'in_progress') bg-purple-100 text-purple-800
-                    @else bg-green-100 text-green-800
-                    @endif">
-                    @switch($project->status)
-                        @case('created') Создан @break
-                        @case('in_calculation') В расчете @break
-                        @case('on_approval') На согласовании @break
-                        @case('on_revision') На доработке @break
-                        @case('approved') Утвержден @break
-                        @case('in_progress') В реализации @break
-                        @case('completed') Завершен @break
-                        @default {{ $project->status }}
-                    @endswitch
-                </span>
+    {{-- STATUS ACTION BANNERS --}}
+    @can('update', $project)
+        @if($project->status === 'created')
+            <div class="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                    <p class="font-bold text-gray-900 text-sm">Проект создан</p>
+                    <p class="text-xs text-gray-500 mt-0.5">Отправьте в расчёт, чтобы начать подготовку документации.</p>
+                </div>
+                <form method="POST" action="{{ route('projects.send-to-calculation', $project) }}">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        Отправить в расчёт
+                    </button>
+                </form>
             </div>
-
-            <div class="flex space-x-2">
-                @can('update', $project)
-                    @if($project->status === 'created')
-                        <form method="POST" action="{{ route('projects.send-to-calculation', $project) }}">
-                            @csrf
-                            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
-                                Отправить в расчет
-                            </button>
-                        </form>
-                    @endif
-
-                    @if($project->status === 'approved')
-                        <form method="POST" action="{{ route('projects.start-implementation', $project) }}">
-                            @csrf
-                            <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
-                                Начать реализацию
-                            </button>
-                        </form>
-                    @endif
-                @endcan
-
-                @can('approve', $project)
-                    @if($project->status === 'on_approval')
-                        <button onclick="openApproveModal()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
-                            Утвердить
-                        </button>
-                        <button onclick="openRejectModal()" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">
-                            Отклонить
-                        </button>
-                    @endif
-                @endcan
+        @endif
+        @if($project->status === 'approved')
+            <div class="bg-green-50 rounded-xl border border-green-200 p-4 flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                    <p class="font-bold text-green-800 text-sm">Проект утверждён</p>
+                    <p class="text-xs text-green-600 mt-0.5">Всё готово для начала реализации.</p>
+                </div>
+                <form method="POST" action="{{ route('projects.start-implementation', $project) }}">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Начать реализацию
+                    </button>
+                </form>
             </div>
-        </div>
-    </div>
+        @endif
+    @endcan
 
-    <!-- Прогресс-бар для директора с раздельным утверждением -->
+    {{-- APPROVAL PROGRESS (director) --}}
     @can('manageParticipants', $project)
         @php
-            $ptoReady = !is_null($project->pto_submitted_at);
-            $supplyReady = !is_null($project->supply_submitted_at);
-            $ptoApproved = $project->pto_approved === true;
-            $supplyApproved = $project->supply_approved === true;
-            $ptoRejected = $project->pto_approved === false;
-            $supplyRejected = $project->supply_approved === false;
-            
-            $ptoFilesCount = $project->files->where('section', 'pto')->count();
-            $supplyFilesCount = $project->files->where('section', 'supply')->count();
-            
-            // Определяем общий статус
-            $bothApproved = $ptoApproved && $supplyApproved;
-            $anyRejected = $ptoRejected || $supplyRejected;
-            $allSubmitted = $ptoReady && $supplyReady;
-            
-            // Проверяем статус проекта
-            $isInProgress = $project->status === 'in_progress';
-            $isOnRevision = $project->status === 'on_revision';
-            $isApproved = $project->status === 'approved';
-            $isOnApproval = $project->status === 'on_approval';
+            $ptoReady      = !is_null($project->pto_submitted_at);
+            $supplyReady   = !is_null($project->supply_submitted_at);
+            $ptoApproved   = $project->pto_approved === true;
+            $supplyApproved= $project->supply_approved === true;
+            $ptoRejected   = $project->pto_approved === false;
+            $supplyRejected= $project->supply_approved === false;
+            $ptoFiles      = $project->files->where('section','pto')->count();
+            $supplyFiles   = $project->files->where('section','supply')->count();
+            $bothApproved  = $ptoApproved && $supplyApproved;
+
+            $ds = function($approved, $rejected, $ready) {
+                if ($approved) return ['border-green-200 bg-green-50', 'bg-green-100 border-b border-green-200', 'bg-green-100 text-green-700', 'Утверждён'];
+                if ($rejected) return ['border-red-200 bg-red-50',     'bg-red-100 border-b border-red-200',   'bg-red-100 text-red-700',   'На доработке'];
+                if ($ready)    return ['border-amber-200 bg-amber-50', 'bg-amber-100 border-b border-amber-200','bg-amber-100 text-amber-700','На проверке'];
+                return ['border-gray-200 bg-white','bg-gray-50 border-b border-gray-100','bg-gray-100 text-gray-500','Ожидание'];
+            };
+            [$ptoCls,$ptoH,$ptoBadge,$ptoLbl]         = $ds($ptoApproved, $ptoRejected, $ptoReady);
+            [$supplyCls,$supplyH,$supplyBadge,$supplyLbl] = $ds($supplyApproved, $supplyRejected, $supplyReady);
         @endphp
-        
-        <div class="bg-white rounded-xl shadow-lg p-6">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-xl font-bold text-gray-800">📊 Прогресс подготовки расчетов</h2>
-                
+
+        <div class="bg-white rounded-xl border border-gray-200">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div>
+                    <p class="font-bold text-gray-900 text-sm">Подготовка расчётов</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Утверждение по отделам перед общим согласованием</p>
+                </div>
                 @if($bothApproved)
-                    <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                        ✅ Все отделы утверждены
-                    </span>
-                @elseif($anyRejected)
-                    <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-medium">
-                        ⚠️ Есть отделы на доработке
-                    </span>
-                @elseif($allSubmitted)
-                    <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
-                        ⏳ Ожидают проверки
-                    </span>
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-100 text-green-700">Все утверждены</span>
+                @elseif($ptoRejected || $supplyRejected)
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-orange-100 text-orange-700">Есть замечания</span>
+                @elseif($ptoReady && $supplyReady)
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">Ожидают проверки</span>
                 @else
-                    <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                        📝 В процессе
-                    </span>
+                    <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">В процессе</span>
                 @endif
             </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- ПТО секция для директора -->
-                <div class="border rounded-xl overflow-hidden transition-all hover:shadow-md
-                    @if($ptoApproved) border-green-300 bg-green-50/30
-                    @elseif($ptoRejected) border-red-300 bg-red-50/30
-                    @elseif($ptoReady) border-yellow-300 bg-yellow-50/30
-                    @else border-gray-200 bg-gray-50/30
-                    @endif">
-                    
-                    <div class="px-5 py-4 border-b flex items-center justify-between
-                        @if($ptoApproved) bg-green-100 border-green-200
-                        @elseif($ptoRejected) bg-red-100 border-red-200
-                        @elseif($ptoReady) bg-yellow-100 border-yellow-200
-                        @else bg-gray-100 border-gray-200
-                        @endif">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-lg font-bold shadow-sm">
-                                📐
+            <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {{-- PTO --}}
+                <div class="rounded-lg border {{ $ptoCls }}">
+                    <div class="{{ $ptoH }} px-4 py-3 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4l-5 5-4-4-7 7"/></svg>
                             </div>
                             <div>
-                                <h3 class="font-bold text-gray-800">ПТО</h3>
-                                <p class="text-xs text-gray-600">{{ $ptoFilesCount }} файлов</p>
+                                <p class="text-sm font-bold text-gray-800">ПТО</p>
+                                <p class="text-xs text-gray-400">{{ $ptoFiles }} файлов</p>
                             </div>
                         </div>
-                        <div class="text-right">
-                            @if($ptoApproved)
-                                <span class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium">✓ Утвержден</span>
-                            @elseif($ptoRejected)
-                                <span class="px-3 py-1 bg-red-600 text-white rounded-full text-xs font-medium">✗ На доработке</span>
-                            @elseif($ptoReady)
-                                <span class="px-3 py-1 bg-yellow-600 text-white rounded-full text-xs font-medium">⏳ На проверке</span>
-                            @else
-                                <span class="px-3 py-1 bg-gray-400 text-white rounded-full text-xs font-medium">⏳ Ожидание</span>
-                            @endif
-                        </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full {{ $ptoBadge }}">{{ $ptoLbl }}</span>
                     </div>
-                    
-                    <div class="p-5 space-y-4">
-                        @if($project->pto_comment)
-                            <div class="bg-white rounded-lg p-3 border-l-4 border-blue-400 shadow-sm">
-                                <p class="text-xs text-gray-500 mb-1">Комментарий ПТО:</p>
-                                <p class="text-sm text-gray-700">"{{ $project->pto_comment }}"</p>
-                            </div>
-                        @endif
-                        
+                    <div class="p-4 space-y-3">
                         @if($project->pto_submitted_at)
-                            <div class="flex items-center text-xs text-gray-500">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                Отправлено: {{ \Carbon\Carbon::parse($project->pto_submitted_at)->format('d.m.Y H:i') }}
-                            </div>
+                            <p class="text-xs text-gray-400 flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                {{ Carbon::parse($project->pto_submitted_at)->format('d.m.Y H:i') }}
+                            </p>
                         @endif
-                        
+                        @if($project->pto_comment)
+                            <div class="text-xs text-gray-700 bg-white border-l-2 {{ $ptoRejected ? 'border-red-400' : 'border-blue-400' }} px-3 py-2 rounded-r-lg">{{ $project->pto_comment }}</div>
+                        @endif
+                        @if($ptoApproved)
+                            <p class="text-xs text-green-700 font-semibold flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Расчёты утверждены
+                            </p>
+                        @endif
                         @if($ptoReady && !$ptoApproved && !$ptoRejected)
-                            <div class="grid grid-cols-2 gap-3 pt-2">
+                            <div class="grid grid-cols-2 gap-2 pt-1">
                                 <form method="POST" action="{{ route('projects.approve-pto', $project) }}">
                                     @csrf
-                                    <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition flex items-center justify-center">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
+                                    <button type="submit" class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
                                         Утвердить
                                     </button>
                                 </form>
-                                <button onclick="openRejectPtoModal()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition flex items-center justify-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
+                                <button onclick="showModal('rejectPtoModal')" class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
                                     Доработка
                                 </button>
-                            </div>
-                        @endif
-                        
-                        @if($ptoApproved)
-                            <div class="bg-green-100 text-green-700 p-3 rounded-lg text-sm flex items-center">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                Расчеты утверждены
-                            </div>
-                        @endif
-                        
-                        @if($ptoRejected)
-                            <div class="bg-red-100 text-red-700 p-3 rounded-lg text-sm">
-                                <p class="font-medium mb-1">Причина доработки:</p>
-                                <p>"{{ $project->pto_comment }}"</p>
                             </div>
                         @endif
                     </div>
                 </div>
-                
-                <!-- Снабжение секция для директора -->
-                <div class="border rounded-xl overflow-hidden transition-all hover:shadow-md
-                    @if($supplyApproved) border-green-300 bg-green-50/30
-                    @elseif($supplyRejected) border-red-300 bg-red-50/30
-                    @elseif($supplyReady) border-yellow-300 bg-yellow-50/30
-                    @else border-gray-200 bg-gray-50/30
-                    @endif">
-                    
-                    <div class="px-5 py-4 border-b flex items-center justify-between
-                        @if($supplyApproved) bg-green-100 border-green-200
-                        @elseif($supplyRejected) bg-red-100 border-red-200
-                        @elseif($supplyReady) bg-yellow-100 border-yellow-200
-                        @else bg-gray-100 border-gray-200
-                        @endif">
-                        <div class="flex items-center space-x-3">
-                            <div class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-lg font-bold shadow-sm">
-                                📦
+
+                {{-- Supply --}}
+                <div class="rounded-lg border {{ $supplyCls }}">
+                    <div class="{{ $supplyH }} px-4 py-3 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
                             </div>
                             <div>
-                                <h3 class="font-bold text-gray-800">Снабжение</h3>
-                                <p class="text-xs text-gray-600">{{ $supplyFilesCount }} файлов</p>
+                                <p class="text-sm font-bold text-gray-800">Снабжение</p>
+                                <p class="text-xs text-gray-400">{{ $supplyFiles }} файлов</p>
                             </div>
                         </div>
-                        <div class="text-right">
-                            @if($supplyApproved)
-                                <span class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-medium">✓ Утвержден</span>
-                            @elseif($supplyRejected)
-                                <span class="px-3 py-1 bg-red-600 text-white rounded-full text-xs font-medium">✗ На доработке</span>
-                            @elseif($supplyReady)
-                                <span class="px-3 py-1 bg-yellow-600 text-white rounded-full text-xs font-medium">⏳ На проверке</span>
-                            @else
-                                <span class="px-3 py-1 bg-gray-400 text-white rounded-full text-xs font-medium">⏳ Ожидание</span>
-                            @endif
-                        </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full {{ $supplyBadge }}">{{ $supplyLbl }}</span>
                     </div>
-                    
-                    <div class="p-5 space-y-4">
-                        @if($project->supply_comment)
-                            <div class="bg-white rounded-lg p-3 border-l-4 border-blue-400 shadow-sm">
-                                <p class="text-xs text-gray-500 mb-1">Комментарий снабжения:</p>
-                                <p class="text-sm text-gray-700">"{{ $project->supply_comment }}"</p>
-                            </div>
-                        @endif
-                        
+                    <div class="p-4 space-y-3">
                         @if($project->supply_submitted_at)
-                            <div class="flex items-center text-xs text-gray-500">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                Отправлено: {{ \Carbon\Carbon::parse($project->supply_submitted_at)->format('d.m.Y H:i') }}
-                            </div>
+                            <p class="text-xs text-gray-400 flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                {{ Carbon::parse($project->supply_submitted_at)->format('d.m.Y H:i') }}
+                            </p>
                         @endif
-                        
+                        @if($project->supply_comment)
+                            <div class="text-xs text-gray-700 bg-white border-l-2 {{ $supplyRejected ? 'border-red-400' : 'border-green-400' }} px-3 py-2 rounded-r-lg">{{ $project->supply_comment }}</div>
+                        @endif
+                        @if($supplyApproved)
+                            <p class="text-xs text-green-700 font-semibold flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Расчёты утверждены
+                            </p>
+                        @endif
                         @if($supplyReady && !$supplyApproved && !$supplyRejected)
-                            <div class="grid grid-cols-2 gap-3 pt-2">
+                            <div class="grid grid-cols-2 gap-2 pt-1">
                                 <form method="POST" action="{{ route('projects.approve-supply', $project) }}">
                                     @csrf
-                                    <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition flex items-center justify-center">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
+                                    <button type="submit" class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
                                         Утвердить
                                     </button>
                                 </form>
-                                <button onclick="openRejectSupplyModal()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition flex items-center justify-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
+                                <button onclick="showModal('rejectSupplyModal')" class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
                                     Доработка
                                 </button>
-                            </div>
-                        @endif
-                        
-                        @if($supplyApproved)
-                            <div class="bg-green-100 text-green-700 p-3 rounded-lg text-sm flex items-center">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                Расчеты утверждены
-                            </div>
-                        @endif
-                        
-                        @if($supplyRejected)
-                            <div class="bg-red-100 text-red-700 p-3 rounded-lg text-sm">
-                                <p class="font-medium mb-1">Причина доработки:</p>
-                                <p>"{{ $project->supply_comment }}"</p>
                             </div>
                         @endif
                     </div>
                 </div>
             </div>
-            
-            <!-- Кнопка отправки на общее согласование -->
-            @if($ptoApproved && $supplyApproved && $project->status !== 'on_approval')
-                <div class="mt-6 pt-4 border-t">
+
+            @if($bothApproved && !in_array($project->status, ['on_approval','approved','in_progress','completed']))
+                <div class="px-5 pb-5">
                     <form method="POST" action="{{ route('projects.send-to-approval', $project) }}">
                         @csrf
-                        <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-4 px-6 rounded-xl font-semibold text-lg shadow-lg transition flex items-center justify-center">
-                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            Оба отдела утверждены → Отправить на общее согласование
+                        <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-600 text-white text-sm font-bold hover:bg-green-700 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Отправить на общее согласование
                         </button>
                     </form>
                 </div>
             @endif
-            
-            <!-- Если проект уже на согласовании -->
+
             @if($project->status === 'on_approval')
-                <div class="mt-6 p-5 bg-yellow-50 rounded-xl border border-yellow-200">
-                    <p class="text-yellow-700 font-medium text-lg mb-3 flex items-center">
-                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Проект на общем согласовании
+                <div class="mx-5 mb-5 rounded-lg bg-amber-50 border border-amber-200 p-4">
+                    <p class="text-sm font-bold text-amber-800 mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        Проект на согласовании
                     </p>
-                    <div class="grid grid-cols-2 gap-4">
-                        <button onclick="openApproveModal()" class="bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg font-medium transition flex items-center justify-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="showModal('approveModal')" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
                             Утвердить проект
                         </button>
-                        <button onclick="openRejectModal()" class="bg-red-500 hover:bg-red-600 text-white py-3 px-4 rounded-lg font-medium transition flex items-center justify-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                            Отклонить проект
+                        <button onclick="showModal('rejectModal')" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                            Отклонить
                         </button>
                     </div>
                 </div>
@@ -357,810 +259,354 @@
         </div>
     @endcan
 
-    <!-- Участники проекта -->
-    <div class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-bold">Участники проекта</h2>
-            
+    {{-- PTO SECTION --}}
+    @can('uploadPTOFiles', $project)
+        @php
+            $userFiles   = $project->files->where('section','pto')->where('user_id', Auth::id());
+            $isSubmitted = !is_null($project->pto_submitted_at);
+            $isApproved  = $project->pto_approved === true;
+            $isRejected  = $project->pto_approved === false;
+            $canUpload   = !$isSubmitted || $isRejected;
+        @endphp
+        <div class="bg-white rounded-xl border border-gray-200">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4l-5 5-4-4-7 7"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-bold text-gray-900 text-sm">ПТО — Мои расчёты</p>
+                        <p class="text-xs text-gray-400">Технический отдел</p>
+                    </div>
+                </div>
+                <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full {{ $isApproved ? 'bg-green-100 text-green-700' : ($isRejected ? 'bg-red-100 text-red-700' : ($isSubmitted ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500')) }}">
+                    <span class="w-1.5 h-1.5 rounded-full {{ $isApproved ? 'bg-green-500' : ($isRejected ? 'bg-red-500' : ($isSubmitted ? 'bg-amber-500' : 'bg-gray-400')) }}"></span>
+                    {{ $isApproved ? 'Утверждено' : ($isRejected ? 'На доработке' : ($isSubmitted ? 'На проверке' : 'Черновик')) }}
+                </span>
+            </div>
+            <div class="p-5 space-y-4">
+                @if($isRejected && $project->pto_comment)
+                    <div class="flex gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <svg class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <div>
+                            <p class="text-xs font-bold text-red-700 mb-1">Замечания директора</p>
+                            <p class="text-sm text-red-600">{{ $project->pto_comment }}</p>
+                        </div>
+                    </div>
+                @endif
+
+                @if($canUpload)
+                    <form method="POST" action="{{ route('projects.files.upload', $project) }}" enctype="multipart/form-data">
+                        @csrf
+                        <input type="hidden" name="section" value="pto">
+                        <label for="pto-files" class="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                            <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span class="text-sm font-semibold text-gray-500">Нажмите или перетащите файлы</span>
+                            <span class="text-xs text-gray-400">Макс. 20 МБ на файл</span>
+                            <span id="pto-count" class="text-xs text-blue-600 font-semibold" style="display:none;"></span>
+                        </label>
+                        <input type="file" id="pto-files" name="files[]" multiple class="hidden" onchange="showCount(this,'pto-count'); this.form.submit()">
+                    </form>
+                @endif
+
+                @if($userFiles->count() > 0)
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Мои файлы ({{ $userFiles->count() }})</p>
+                            @if($canUpload)
+                                <button onclick="deleteSelected('pto')" id="del-pto-btn" class="text-xs text-red-600 font-semibold hover:underline flex items-center gap-1" style="display:none;">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                                    Удалить выбранные
+                                </button>
+                            @endif
+                        </div>
+                        <div class="space-y-1.5">
+                            @foreach($userFiles->sortByDesc('created_at') as $file)
+                                @php $ext = strtolower(pathinfo($file->file_name, PATHINFO_EXTENSION)); @endphp
+                                <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white transition-all group" id="file-{{ $file->id }}">
+                                    @if($canUpload)
+                                        <input type="checkbox" class="file-cb-pto w-3.5 h-3.5 accent-blue-600 flex-shrink-0" data-id="{{ $file->id }}" onchange="syncDel('pto')">
+                                    @endif
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 {{ match($ext) { 'pdf' => 'bg-red-50', 'doc','docx' => 'bg-blue-50', 'xls','xlsx' => 'bg-green-50', default => 'bg-gray-100' } }}">
+                                        <svg class="w-4 h-4 {{ match($ext) { 'pdf' => 'text-red-500', 'doc','docx' => 'text-blue-500', 'xls','xlsx' => 'text-green-500', default => 'text-gray-400' } }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <a href="{{ Storage::url($file->file_path) }}" target="_blank" class="text-sm font-semibold text-blue-600 hover:text-blue-800 truncate block">{{ $file->file_name }}</a>
+                                        <p class="text-xs text-gray-400 mt-0.5">{{ Carbon::parse($file->created_at)->format('d.m.Y H:i') }} · {{ round($file->file_size/1024, 1) }} KB</p>
+                                    </div>
+                                    @if($canUpload)
+                                        <button onclick="deleteSingle({{ $file->id }})" class="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                                        </button>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                        <svg class="w-7 h-7 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                        <p class="text-sm text-gray-400">Нет загруженных файлов</p>
+                    </div>
+                @endif
+
+                @if($userFiles->count() > 0 && ((!$isSubmitted && $canUpload) || $isRejected))
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="text-sm font-bold text-gray-800 mb-3">{{ $isRejected ? 'Отправить исправленные расчёты' : 'Отправить на проверку' }}</p>
+                        <form method="POST" action="{{ route('projects.submit-pto', $project) }}">
+                            @csrf
+                            <textarea name="comment" rows="2" required class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-400 resize-none mb-3" placeholder="{{ $isRejected ? 'Опишите что исправили...' : 'Краткое описание расчётов...' }}"></textarea>
+                            <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                Отправить на проверку
+                            </button>
+                        </form>
+                        <p class="text-xs text-gray-400 text-center mt-2">После отправки файлы заморожены до решения директора</p>
+                    </div>
+                @endif
+
+                @if($isSubmitted && !$isApproved && !$isRejected)
+                    <div class="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        Расчёты отправлены. Ожидайте решения директора.
+                    </div>
+                @endif
+                @if($isApproved)
+                    <div class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Расчёты утверждены директором.
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endcan
+
+    {{-- SUPPLY SECTION --}}
+    @can('uploadSupplyFiles', $project)
+        @php
+            $userFiles   = $project->files->where('section','supply')->where('user_id', Auth::id());
+            $isSubmitted = !is_null($project->supply_submitted_at);
+            $isApproved  = $project->supply_approved === true;
+            $isRejected  = $project->supply_approved === false;
+            $canUpload   = !$isSubmitted || $isRejected;
+        @endphp
+        <div class="bg-white rounded-xl border border-gray-200">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                    </div>
+                    <div>
+                        <p class="font-bold text-gray-900 text-sm">Снабжение — Мои сметы</p>
+                        <p class="text-xs text-gray-400">Отдел снабжения</p>
+                    </div>
+                </div>
+                <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full {{ $isApproved ? 'bg-green-100 text-green-700' : ($isRejected ? 'bg-red-100 text-red-700' : ($isSubmitted ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500')) }}">
+                    <span class="w-1.5 h-1.5 rounded-full {{ $isApproved ? 'bg-green-500' : ($isRejected ? 'bg-red-500' : ($isSubmitted ? 'bg-amber-500' : 'bg-gray-400')) }}"></span>
+                    {{ $isApproved ? 'Утверждено' : ($isRejected ? 'На доработке' : ($isSubmitted ? 'На проверке' : 'Черновик')) }}
+                </span>
+            </div>
+            <div class="p-5 space-y-4">
+                @if($isRejected && $project->supply_comment)
+                    <div class="flex gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <svg class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <div>
+                            <p class="text-xs font-bold text-red-700 mb-1">Замечания директора</p>
+                            <p class="text-sm text-red-600">{{ $project->supply_comment }}</p>
+                        </div>
+                    </div>
+                @endif
+
+                @if($canUpload)
+                    <form method="POST" action="{{ route('projects.files.upload', $project) }}" enctype="multipart/form-data">
+                        @csrf
+                        <input type="hidden" name="section" value="supply">
+                        <label for="supply-files" class="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-green-400 hover:bg-green-50 transition-colors">
+                            <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                            <span class="text-sm font-semibold text-gray-500">Нажмите или перетащите файлы</span>
+                            <span class="text-xs text-gray-400">Макс. 20 МБ на файл</span>
+                            <span id="supply-count" class="text-xs text-green-600 font-semibold" style="display:none;"></span>
+                        </label>
+                        <input type="file" id="supply-files" name="files[]" multiple class="hidden" onchange="showCount(this,'supply-count'); this.form.submit()">
+                    </form>
+                @endif
+
+                @if($userFiles->count() > 0)
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Мои файлы ({{ $userFiles->count() }})</p>
+                            @if($canUpload)
+                                <button onclick="deleteSelected('supply')" id="del-supply-btn" class="text-xs text-red-600 font-semibold hover:underline flex items-center gap-1" style="display:none;">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                                    Удалить выбранные
+                                </button>
+                            @endif
+                        </div>
+                        <div class="space-y-1.5">
+                            @foreach($userFiles->sortByDesc('created_at') as $file)
+                                @php $ext = strtolower(pathinfo($file->file_name, PATHINFO_EXTENSION)); @endphp
+                                <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white transition-all group" id="file-{{ $file->id }}">
+                                    @if($canUpload)
+                                        <input type="checkbox" class="file-cb-supply w-3.5 h-3.5 accent-green-600 flex-shrink-0" data-id="{{ $file->id }}" onchange="syncDel('supply')">
+                                    @endif
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 {{ match($ext) { 'pdf' => 'bg-red-50', 'doc','docx' => 'bg-blue-50', 'xls','xlsx' => 'bg-green-50', default => 'bg-gray-100' } }}">
+                                        <svg class="w-4 h-4 {{ match($ext) { 'pdf' => 'text-red-500', 'doc','docx' => 'text-blue-500', 'xls','xlsx' => 'text-green-500', default => 'text-gray-400' } }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <a href="{{ Storage::url($file->file_path) }}" target="_blank" class="text-sm font-semibold text-blue-600 hover:text-blue-800 truncate block">{{ $file->file_name }}</a>
+                                        <p class="text-xs text-gray-400 mt-0.5">{{ Carbon::parse($file->created_at)->format('d.m.Y H:i') }} · {{ round($file->file_size/1024, 1) }} KB</p>
+                                    </div>
+                                    @if($canUpload)
+                                        <button onclick="deleteSingle({{ $file->id }})" class="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                                        </button>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
+                        <svg class="w-7 h-7 text-gray-300 mx-auto mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+                        <p class="text-sm text-gray-400">Нет загруженных файлов</p>
+                    </div>
+                @endif
+
+                @if($userFiles->count() > 0 && ((!$isSubmitted && $canUpload) || $isRejected))
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="text-sm font-bold text-gray-800 mb-3">{{ $isRejected ? 'Отправить исправленные сметы' : 'Отправить на проверку' }}</p>
+                        <form method="POST" action="{{ route('projects.submit-supply', $project) }}">
+                            @csrf
+                            <textarea name="comment" rows="2" required class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-green-400 resize-none mb-3" placeholder="{{ $isRejected ? 'Опишите что исправили...' : 'Краткое описание смет...' }}"></textarea>
+                            <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                Отправить на проверку
+                            </button>
+                        </form>
+                    </div>
+                @endif
+
+                @if($isSubmitted && !$isApproved && !$isRejected)
+                    <div class="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                        Сметы отправлены. Ожидайте решения директора.
+                    </div>
+                @endif
+                @if($isApproved)
+                    <div class="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Сметы утверждены директором.
+                    </div>
+                @endif
+            </div>
+        </div>
+    @endcan
+
+    {{-- PARTICIPANTS --}}
+    <div class="bg-white rounded-xl border border-gray-200">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <p class="font-bold text-gray-900 text-sm">Участники проекта</p>
             @can('manageParticipants', $project)
-                <button onclick="openAddParticipantModal()" class="bg-blue-500 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-600">
-                    Добавить участника
+                <button onclick="showModal('addParticipantModal')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Добавить
                 </button>
             @endcan
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-2">
             @foreach($project->participants as $participant)
                 @php
-                    // Определяем, является ли участник ключевой ролью (нельзя удалить)
-                    $isKeyRole = in_array($participant->pivot->role, [
-                        'director', 
-                        'deputy_director', 
-                        'pto', 
-                        'supply'
-                    ]);
-                    
-                    // Определяем иконку для роли
-                    $roleIcon = match($participant->pivot->role) {
-                        'director' => '👑',
-                        'deputy_director' => '⭐',
-                        'pto' => '📐',
-                        'supply' => '📦',
-                        'project_manager' => '📋',
-                        'site_manager' => '🔧',
-                        'accountant' => '💰',
-                        default => '👤'
-                    };
-                    
-                    // Цвет для роли
-                    $roleColor = match($participant->pivot->role) {
-                        'director' => 'bg-purple-100 text-purple-800',
-                        'deputy_director' => 'bg-indigo-100 text-indigo-800',
-                        'pto' => 'bg-blue-100 text-blue-800',
-                        'supply' => 'bg-green-100 text-green-800',
-                        'project_manager' => 'bg-yellow-100 text-yellow-800',
-                        'site_manager' => 'bg-orange-100 text-orange-800',
-                        'accountant' => 'bg-emerald-100 text-emerald-800',
-                        default => 'bg-gray-100 text-gray-800'
-                    };
+                    $isKey = in_array($participant->pivot->role, ['director','deputy_director','pto','supply']);
+                    $rb  = $roleBadge[$participant->pivot->role]  ?? 'bg-gray-100 text-gray-600';
+                    $rav = $roleAvatar[$participant->pivot->role] ?? 'bg-gray-100 text-gray-600';
                 @endphp
-                
-                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-sm transition">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-sm shadow-sm">
-                            <span class="text-white">{{ $roleIcon }}</span>
+                <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white transition-all">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full {{ $rav }} flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {{ strtoupper(substr($participant->name, 0, 1)) }}
                         </div>
                         <div>
-                            <p class="font-medium text-gray-800">
-                                {{ $participant->name }}
-                                @if($isKeyRole)
-                                    <span class="ml-2 text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full">ключевая роль</span>
-                                @endif
-                            </p>
-                            <p class="text-xs mt-0.5">
-                                <span class="px-2 py-0.5 rounded-full {{ $roleColor }}">{{ $participant->pivot->role }}</span>
-                            </p>
+                            <p class="text-sm font-semibold text-gray-800">{{ $participant->name }}</p>
+                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ $rb }}">{{ $roleLabels[$participant->pivot->role] ?? $participant->pivot->role }}</span>
                         </div>
                     </div>
-                    
                     @can('manageParticipants', $project)
-                        @if(!$isKeyRole)
-                            <form method="POST" action="{{ route('projects.participants.remove', [$project, $participant]) }}" 
-                                onsubmit="return confirm('Удалить участника из проекта?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-red-600 hover:text-red-800 text-sm flex items-center px-2 py-1 hover:bg-red-50 rounded transition">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                    Удалить
+                        @if(!$isKey)
+                            <form method="POST" action="{{ route('projects.participants.remove', [$project, $participant]) }}" onsubmit="return confirm('Удалить участника?')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
                                 </button>
                             </form>
                         @else
-                            <span class="text-gray-400 text-sm px-2 py-1" title="Эту роль нельзя удалить">
-                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                                </svg>
-                                обязательный
-                            </span>
+                            <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" title="Обязательный участник"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                         @endif
                     @endcan
                 </div>
             @endforeach
         </div>
-        
-        <!-- Подсказка о ключевых ролях -->
-        <div class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <p class="text-xs text-blue-700 flex items-center">
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Директор, зам.директора, ПТО и снабжение - обязательные участники проекта. Их нельзя удалить.
-            </p>
-        </div>
     </div>
 
-    <!-- Специальная секция для ПТО -->
-    @can('uploadPTOFiles', $project)
-        @php
-            $userFiles = $project->files->where('section', 'pto')->where('user_id', Auth::id());
-            $isSubmitted = !is_null($project->pto_submitted_at);
-            $isApproved = $project->pto_approved === true;
-            $isRejected = $project->pto_approved === false;
-            $canUpload = !$isSubmitted || $isRejected;
-        @endphp
-        
-        <div class="bg-white rounded-xl shadow-lg p-6">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-2xl">
-                        📐
-                    </div>
-                    <h2 class="text-2xl font-bold text-gray-800">ПТО - Мои расчеты</h2>
-                </div>
-                
-                <!-- Статус отдела -->
-                <div class="px-4 py-2 rounded-lg text-sm font-medium
-                    @if($isApproved) bg-green-100 text-green-800 border border-green-300
-                    @elseif($isRejected) bg-red-100 text-red-800 border border-red-300
-                    @elseif($isSubmitted) bg-yellow-100 text-yellow-800 border border-yellow-300
-                    @else bg-gray-100 text-gray-800 border border-gray-300
-                    @endif">
-                    @if($isApproved)
-                        ✅ Утверждено
-                    @elseif($isRejected)
-                        🔄 Требуется доработка
-                    @elseif($isSubmitted)
-                        ⏳ На проверке
-                    @else
-                        📝 Черновик
-                    @endif
-                </div>
+    {{-- TABS --}}
+    <div class="bg-white rounded-xl border border-gray-200">
+        <div class="px-4 pt-4">
+            <div class="flex gap-0.5 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+                @foreach([['files','Файлы'],['comments','Комментарии'],['tasks','Задачи'],['materials','Материалы'],['financial','Финансы'],['history','История']] as [$id, $label])
+                    <button class="tab-btn flex-shrink-0 px-3 py-2 rounded-md text-xs font-semibold transition-all whitespace-nowrap {{ $id === 'files' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700' }}"
+                            onclick="switchTab(this, '{{ $id }}-tab')">{{ $label }}</button>
+                @endforeach
             </div>
-            
-            <!-- Комментарий при доработке -->
-            @if($isRejected && $project->pto_comment)
-                <div class="mb-6 p-5 bg-red-50 border-2 border-red-200 rounded-xl">
-                    <div class="flex items-start space-x-3">
-                        <div class="text-red-500 text-xl">⚠️</div>
-                        <div>
-                            <p class="font-medium text-red-700 mb-1">Комментарий директора к доработке:</p>
-                            <p class="text-red-600">"{{ $project->pto_comment }}"</p>
-                            <p class="text-sm text-red-500 mt-2">Загрузите исправленные файлы и отправьте заново.</p>
-                        </div>
-                    </div>
-                </div>
-            @endif
-            
-            <!-- Форма загрузки файлов -->
-            @if($canUpload)
-                <div class="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl border-2 border-blue-200">
-                    <h3 class="font-semibold text-blue-800 mb-3 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
-                        </svg>
-                        {{ $isRejected ? 'Загрузить исправленные файлы' : 'Загрузить файлы расчетов' }}
-                    </h3>
-                    
-                    <!-- Форма с множественным выбором файлов -->
-                    <form method="POST" action="{{ route('projects.files.upload', $project) }}" enctype="multipart/form-data" class="space-y-4">
-                        @csrf
-                        <input type="hidden" name="section" value="pto">
-                        
-                        <div class="border-2 border-dashed border-blue-200 rounded-lg p-6 text-center hover:border-blue-400 transition">
-                            <input type="file" 
-                                name="files[]" 
-                                id="pto-files" 
-                                multiple 
-                                class="hidden" 
-                                onchange="updatePTOFileList(this)">
-                            
-                            <label for="pto-files" class="cursor-pointer">
-                                <svg class="mx-auto h-12 w-12 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                                </svg>
-                                <p class="mt-2 text-sm text-blue-600">Нажмите для выбора файлов</p>
-                                <p class="text-xs text-gray-500">или перетащите их сюда</p>
-                            </label>
-                            
-                            <!-- Список выбранных файлов -->
-                            <div id="pto-file-list" class="mt-3 text-sm text-left max-h-32 overflow-y-auto"></div>
-                        </div>
-                        
-                        <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
-                            </svg>
-                            Загрузить {{ $isRejected ? 'исправленные файлы' : 'файлы' }} (можно несколько)
-                        </button>
-                    </form>
-                    
-                    <p class="text-xs text-gray-500 mt-2">Поддерживаются любые форматы файлов. Максимальный размер одного файла: 20MB</p>
-                </div>
-            @endif
-            
-            <!-- Список загруженных файлов с возможностью множественного выбора -->
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="font-semibold text-gray-700 flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    Мои файлы
-                </h3>
-                
-                @if($userFiles->count() > 0 && $canUpload)
-                    <div class="flex items-center space-x-2">
-                        <!-- Кнопка выбора всех файлов -->
-                        <button onclick="toggleSelectAll('pto')" class="text-sm text-blue-600 hover:text-blue-800 flex items-center">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
-                            Выбрать все
-                        </button>
-                        
-                        <!-- Кнопка удаления выбранных -->
-                        <button onclick="deleteSelectedFiles('pto')" 
-                                class="text-sm text-red-600 hover:text-red-800 flex items-center px-3 py-1 bg-red-50 rounded-lg">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                            Удалить выбранные
-                        </button>
-                    </div>
-                @endif
-            </div>
-            
-            @if($userFiles->count() > 0)
-                <div class="space-y-3 mb-6" id="pto-files-container">
-                    @foreach($userFiles->sortByDesc('created_at') as $file)
-                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:shadow-md transition group" id="file-{{ $file->id }}">
-                            <div class="flex items-center space-x-4 flex-1">
-                                <!-- Чекбокс для выбора -->
-                                @if($canUpload)
-                                    <input type="checkbox" 
-                                        class="file-checkbox-pto w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                        data-file-id="{{ $file->id }}"
-                                        data-section="pto">
-                                @endif
-                                
-                                <span class="text-3xl">
-                                    @php
-                                        $ext = strtolower(pathinfo($file->file_name, PATHINFO_EXTENSION));
-                                        echo match($ext) {
-                                            'pdf' => '📕',
-                                            'doc', 'docx' => '📘',
-                                            'xls', 'xlsx' => '📊',
-                                            'jpg', 'jpeg', 'png', 'gif' => '🖼️',
-                                            default => '📄'
-                                        };
-                                    @endphp
-                                </span>
-                                <div class="flex-1">
-                                    <a href="{{ Storage::url($file->file_path) }}" target="_blank" 
-                                    class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
-                                        {{ $file->file_name }}
-                                    </a>
-                                    <div class="flex items-center space-x-4 text-xs text-gray-500 mt-1">
-                                        <span>📅 {{ \Carbon\Carbon::parse($file->created_at)->format('d.m.Y H:i') }}</span>
-                                        <span>📦 {{ round($file->file_size / 1024, 2) }} KB</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            @if($canUpload)
-                                <button onclick="deleteSingleFile({{ $file->id }})" 
-                                        class="text-red-600 hover:text-red-800 p-2 hover:bg-red-100 rounded-lg transition opacity-0 group-hover:opacity-100"
-                                        title="Удалить">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            @endif
-                        </div>
+        </div>
+
+        {{-- Files --}}
+        <div id="files-tab" class="tab-pane p-5">
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <div class="flex items-center gap-1.5">
+                    @foreach([['all','Все'],['general','Общие'],['pto','ПТО'],['supply','Снабжение']] as [$f, $l])
+                        <button onclick="filterFiles('{{ $f }}', this)" data-filter="{{ $f }}"
+                                class="file-filter px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors {{ $f === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200' }}">{{ $l }}</button>
                     @endforeach
                 </div>
-            @else
-                <div class="text-center py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 mb-6">
-                    <div class="text-5xl mb-3">📁</div>
-                    <p class="text-gray-500">Нет загруженных файлов</p>
-                    @if($canUpload)
-                        <p class="text-sm text-gray-400 mt-2">Загрузите файлы используя форму выше</p>
-                    @endif
-                </div>
-            @endif
-            
-            <!-- Кнопка отправки на проверку -->
-            @if($userFiles->count() > 0)
-                @if(!$isSubmitted)
-                    <!-- Если не отправлено -->
-                    <div class="mt-6 p-5 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border-2 border-yellow-200">
-                        <h3 class="font-semibold text-yellow-800 mb-3 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                            </svg>
-                            Отправить на проверку
-                        </h3>
-                        <form method="POST" action="{{ route('projects.submit-pto', $project) }}">
-                            @csrf
-                            <div class="space-y-4">
-                                <textarea name="comment" rows="3" required 
-                                        class="w-full border-2 border-yellow-200 rounded-lg p-3 focus:border-yellow-400 focus:ring focus:ring-yellow-200" 
-                                        placeholder="Опишите что за расчеты, на что обратить внимание..."></textarea>
-                                <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-lg font-medium transition flex items-center justify-center">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                    </svg>
-                                    Отправить на проверку
-                                </button>
-                            </div>
-                        </form>
-                        <p class="text-xs text-gray-500 mt-3 text-center">
-                            После отправки вы не сможете изменять файлы до решения директора
-                        </p>
-                    </div>
-                @elseif($isRejected)
-                    <!-- Если на доработке -->
-                    <div class="mt-6 p-5 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border-2 border-yellow-200">
-                        <h3 class="font-semibold text-yellow-800 mb-3 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                            </svg>
-                            Отправить исправленные расчеты
-                        </h3>
-                        <form method="POST" action="{{ route('projects.submit-pto', $project) }}">
-                            @csrf
-                            <div class="space-y-4">
-                                <textarea name="comment" rows="3" required 
-                                        class="w-full border-2 border-yellow-200 rounded-lg p-3 focus:border-yellow-400 focus:ring focus:ring-yellow-200" 
-                                        placeholder="Опишите что исправили..."></textarea>
-                                <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-lg font-medium transition flex items-center justify-center">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                    </svg>
-                                    Отправить исправленные расчеты
-                                </button>
-                            </div>
-                        </form>
-                        <p class="text-xs text-gray-500 mt-3 text-center">
-                            После отправки вы не сможете изменять файлы до решения директора
-                        </p>
-                    </div>
-                @endif
-            @endif
-            
-            <!-- Сообщение что на проверке -->
-            @if($isSubmitted && !$isApproved && !$isRejected)
-                <div class="mt-4 p-4 bg-yellow-100 rounded-lg flex items-center text-yellow-800">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    ⏳ Расчеты отправлены на проверку. Ожидайте решения директора.
-                </div>
-            @endif
-            
-            <!-- Сообщение что утверждено -->
-            @if($isApproved)
-                <div class="mt-4 p-4 bg-green-100 rounded-lg flex items-center text-green-800">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    ✅ Расчеты утверждены директором!
-                </div>
-            @endif
-        </div>
-    @endcan
-
-    <!-- Специальная секция для Снабжения -->
-    @can('uploadSupplyFiles', $project)
-        @php
-            $userFiles = $project->files->where('section', 'supply')->where('user_id', Auth::id());
-            $isSubmitted = !is_null($project->supply_submitted_at);
-            $isApproved = $project->supply_approved === true;
-            $isRejected = $project->supply_approved === false;
-            $canUpload = !$isSubmitted || $isRejected;
-        @endphp
-        
-        <div class="bg-white rounded-xl shadow-lg p-6">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-2xl">
-                        📦
-                    </div>
-                    <h2 class="text-2xl font-bold text-gray-800">Снабжение - Мои сметы</h2>
-                </div>
-                
-                <!-- Статус отдела -->
-                <div class="px-4 py-2 rounded-lg text-sm font-medium
-                    @if($isApproved) bg-green-100 text-green-800 border border-green-300
-                    @elseif($isRejected) bg-red-100 text-red-800 border border-red-300
-                    @elseif($isSubmitted) bg-yellow-100 text-yellow-800 border border-yellow-300
-                    @else bg-gray-100 text-gray-800 border border-gray-300
-                    @endif">
-                    @if($isApproved)
-                        ✅ Утверждено
-                    @elseif($isRejected)
-                        🔄 Требуется доработка
-                    @elseif($isSubmitted)
-                        ⏳ На проверке
-                    @else
-                        📝 Черновик
-                    @endif
-                </div>
-            </div>
-            
-            <!-- Комментарий при доработке -->
-            @if($isRejected && $project->supply_comment)
-                <div class="mb-6 p-5 bg-red-50 border-2 border-red-200 rounded-xl">
-                    <div class="flex items-start space-x-3">
-                        <div class="text-red-500 text-xl">⚠️</div>
-                        <div>
-                            <p class="font-medium text-red-700 mb-1">Комментарий директора к доработке:</p>
-                            <p class="text-red-600">"{{ $project->supply_comment }}"</p>
-                            <p class="text-sm text-red-500 mt-2">Загрузите исправленные файлы и отправьте заново.</p>
-                        </div>
-                    </div>
-                </div>
-            @endif
-            
-            <!-- Форма загрузки файлов -->
-            @if($canUpload)
-                <div class="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 p-5 rounded-xl border-2 border-green-200">
-                    <h3 class="font-semibold text-green-800 mb-3 flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
-                        </svg>
-                        {{ $isRejected ? 'Загрузить исправленные файлы' : 'Загрузить файлы смет' }}
-                    </h3>
-                    
-                    <!-- Форма с множественным выбором файлов -->
-                    <form method="POST" action="{{ route('projects.files.upload', $project) }}" enctype="multipart/form-data" class="space-y-4">
-                        @csrf
-                        <input type="hidden" name="section" value="supply">
-                        
-                        <div class="border-2 border-dashed border-green-200 rounded-lg p-6 text-center hover:border-green-400 transition">
-                            <input type="file" 
-                                name="files[]" 
-                                id="supply-files" 
-                                multiple 
-                                class="hidden" 
-                                onchange="updateSupplyFileList(this)">
-                            
-                            <label for="supply-files" class="cursor-pointer">
-                                <svg class="mx-auto h-12 w-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                                </svg>
-                                <p class="mt-2 text-sm text-green-600">Нажмите для выбора файлов</p>
-                                <p class="text-xs text-gray-500">или перетащите их сюда</p>
-                            </label>
-                            
-                            <!-- Список выбранных файлов -->
-                            <div id="supply-file-list" class="mt-3 text-sm text-left max-h-32 overflow-y-auto"></div>
-                        </div>
-                        
-                        <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition flex items-center justify-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
-                            </svg>
-                            Загрузить {{ $isRejected ? 'исправленные файлы' : 'файлы' }} (можно несколько)
-                        </button>
-                    </form>
-                    
-                    <p class="text-xs text-gray-500 mt-2">Поддерживаются любые форматы файлов. Максимальный размер одного файла: 20MB</p>
-                </div>
-            @endif
-            
-            <!-- Список загруженных файлов с возможностью множественного выбора -->
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="font-semibold text-gray-700 flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    Мои файлы
-                </h3>
-                
-                @if($userFiles->count() > 0 && $canUpload)
-                    <div class="flex items-center space-x-2">
-                        <!-- Кнопка выбора всех файлов -->
-                        <button onclick="toggleSelectAll('supply')" class="text-sm text-green-600 hover:text-green-800 flex items-center">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
-                            Выбрать все
-                        </button>
-                        
-                        <!-- Кнопка удаления выбранных -->
-                        <button onclick="deleteSelectedFiles('supply')" 
-                                class="text-sm text-red-600 hover:text-red-800 flex items-center px-3 py-1 bg-red-50 rounded-lg">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                            Удалить выбранные
-                        </button>
-                    </div>
-                @endif
-            </div>
-            
-            @if($userFiles->count() > 0)
-                <div class="space-y-3 mb-6" id="supply-files-container">
-                    @foreach($userFiles->sortByDesc('created_at') as $file)
-                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:shadow-md transition group" id="file-{{ $file->id }}">
-                            <div class="flex items-center space-x-4 flex-1">
-                                <!-- Чекбокс для выбора -->
-                                @if($canUpload)
-                                    <input type="checkbox" 
-                                        class="file-checkbox-supply w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
-                                        data-file-id="{{ $file->id }}"
-                                        data-section="supply">
-                                @endif
-                                
-                                <span class="text-3xl">
-                                    @php
-                                        $ext = strtolower(pathinfo($file->file_name, PATHINFO_EXTENSION));
-                                        echo match($ext) {
-                                            'pdf' => '📕',
-                                            'doc', 'docx' => '📘',
-                                            'xls', 'xlsx' => '📊',
-                                            'jpg', 'jpeg', 'png', 'gif' => '🖼️',
-                                            default => '📄'
-                                        };
-                                    @endphp
-                                </span>
-                                <div class="flex-1">
-                                    <a href="{{ Storage::url($file->file_path) }}" target="_blank" 
-                                    class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
-                                        {{ $file->file_name }}
-                                    </a>
-                                    <div class="flex items-center space-x-4 text-xs text-gray-500 mt-1">
-                                        <span>📅 {{ \Carbon\Carbon::parse($file->created_at)->format('d.m.Y H:i') }}</span>
-                                        <span>📦 {{ round($file->file_size / 1024, 2) }} KB</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            @if($canUpload)
-                                <button onclick="deleteSingleFile({{ $file->id }})" 
-                                        class="text-red-600 hover:text-red-800 p-2 hover:bg-red-100 rounded-lg transition opacity-0 group-hover:opacity-100"
-                                        title="Удалить">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                </button>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
-            @else
-                <div class="text-center py-10 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 mb-6">
-                    <div class="text-5xl mb-3">📁</div>
-                    <p class="text-gray-500">Нет загруженных файлов</p>
-                    @if($canUpload)
-                        <p class="text-sm text-gray-400 mt-2">Загрузите файлы используя форму выше</p>
-                    @endif
-                </div>
-            @endif
-            
-            <!-- Кнопка отправки на проверку -->
-            @if($userFiles->count() > 0)
-                @if(!$isSubmitted)
-                    <!-- Если не отправлено -->
-                    <div class="mt-6 p-5 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border-2 border-yellow-200">
-                        <h3 class="font-semibold text-yellow-800 mb-3 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                            </svg>
-                            Отправить на проверку
-                        </h3>
-                        <form method="POST" action="{{ route('projects.submit-supply', $project) }}">
-                            @csrf
-                            <div class="space-y-4">
-                                <textarea name="comment" rows="3" required 
-                                        class="w-full border-2 border-yellow-200 rounded-lg p-3 focus:border-yellow-400 focus:ring focus:ring-yellow-200" 
-                                        placeholder="Опишите что за сметы, на что обратить внимание..."></textarea>
-                                <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-lg font-medium transition flex items-center justify-center">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                    </svg>
-                                    Отправить на проверку
-                                </button>
-                            </div>
-                        </form>
-                        <p class="text-xs text-gray-500 mt-3 text-center">
-                            После отправки вы не сможете изменять файлы до решения директора
-                        </p>
-                    </div>
-                @elseif($isRejected)
-                    <!-- Если на доработке -->
-                    <div class="mt-6 p-5 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border-2 border-yellow-200">
-                        <h3 class="font-semibold text-yellow-800 mb-3 flex items-center">
-                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                            </svg>
-                            Отправить исправленные сметы
-                        </h3>
-                        <form method="POST" action="{{ route('projects.submit-supply', $project) }}">
-                            @csrf
-                            <div class="space-y-4">
-                                <textarea name="comment" rows="3" required 
-                                        class="w-full border-2 border-yellow-200 rounded-lg p-3 focus:border-yellow-400 focus:ring focus:ring-yellow-200" 
-                                        placeholder="Опишите что исправили..."></textarea>
-                                <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 px-4 rounded-lg font-medium transition flex items-center justify-center">
-                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                                    </svg>
-                                    Отправить исправленные сметы
-                                </button>
-                            </div>
-                        </form>
-                        <p class="text-xs text-gray-500 mt-3 text-center">
-                            После отправки вы не сможете изменять файлы до решения директора
-                        </p>
-                    </div>
-                @endif
-            @endif
-            
-            <!-- Сообщение что на проверке -->
-            @if($isSubmitted && !$isApproved && !$isRejected)
-                <div class="mt-4 p-4 bg-yellow-100 rounded-lg flex items-center text-yellow-800">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    ⏳ Сметы отправлены на проверку. Ожидайте решения директора.
-                </div>
-            @endif
-            
-            <!-- Сообщение что утверждено -->
-            @if($isApproved)
-                <div class="mt-4 p-4 bg-green-100 rounded-lg flex items-center text-green-800">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    ✅ Сметы утверждены директором!
-                </div>
-            @endif
-        </div>
-    @endcan
-
-    <!-- Вкладки для всех пользователей -->
-    <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="border-b border-gray-200">
-            <nav class="flex -mb-px">
-                <button onclick="showTab('files')" class="tab-button active px-6 py-3 text-sm font-medium text-blue-600 border-b-2 border-blue-600">
-                    Файлы
+                <button onclick="document.getElementById('general-file-input').click()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Загрузить
                 </button>
-                <button onclick="showTab('comments')" class="tab-button px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
-                    Комментарии
-                </button>
-                <button onclick="showTab('tasks')" class="tab-button px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
-                    Задачи
-                </button>
-                <button onclick="showTab('materials')" class="tab-button px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
-                    Материалы
-                </button>
-                <button onclick="showTab('financial')" class="tab-button px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
-                    Финансы
-                </button>
-                <button onclick="showTab('history')" class="tab-button px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
-                    История
-                </button>
-            </nav>
-        </div>
-
-        <!-- Файлы -->
-        <div id="files-tab" class="tab-content p-6">
-            <!-- Панель инструментов -->
-            <div class="mb-6 bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex items-center space-x-4">
-                        <h3 class="text-lg font-semibold text-gray-800">📁 Файлы проекта</h3>
-                        
-                        <!-- Фильтры -->
-                        <div class="flex bg-gray-100 rounded-lg p-1">
-                            <button onclick="filterFiles('all')" 
-                                    class="filter-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 
-                                        @if(request('filter', 'all') == 'all') bg-blue-500 text-white shadow-md @else text-gray-700 hover:bg-gray-200 @endif">
-                                Все
-                            </button>
-                            <button onclick="filterFiles('general')" 
-                                    class="filter-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
-                                        @if(request('filter') == 'general') bg-blue-500 text-white shadow-md @else text-gray-700 hover:bg-gray-200 @endif">
-                                Общие
-                            </button>
-                            <button onclick="filterFiles('pto')" 
-                                    class="filter-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
-                                        @if(request('filter') == 'pto') bg-blue-500 text-white shadow-md @else text-gray-700 hover:bg-gray-200 @endif">
-                                ПТО
-                            </button>
-                            <button onclick="filterFiles('supply')" 
-                                    class="filter-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
-                                        @if(request('filter') == 'supply') bg-blue-500 text-white shadow-md @else text-gray-700 hover:bg-gray-200 @endif">
-                                Снабжение
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Поиск и сортировка -->
-                    <div class="flex items-center space-x-2">
-                        <div class="relative">
-                            <input type="text" 
-                                id="file-search" 
-                                placeholder="Поиск файлов..." 
-                                class="pl-8 pr-4 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            <svg class="absolute left-2 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                        </div>
-                        
-                        <select id="sort-files" class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-                            <option value="date_desc">Сначала новые</option>
-                            <option value="date_asc">Сначала старые</option>
-                            <option value="name_asc">По имени (А-Я)</option>
-                            <option value="name_desc">По имени (Я-А)</option>
-                            <option value="size_desc">По размеру (сначала большие)</option>
-                            <option value="size_asc">По размеру (сначала маленькие)</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <!-- Панель действий с файлами -->
-                <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <!-- Кнопка выбора всех файлов -->
-                        <button onclick="toggleSelectAllFiles()" 
-                                class="text-sm text-blue-600 hover:text-blue-800 flex items-center px-3 py-1.5 bg-blue-50 rounded-lg transition">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
-                            Выбрать все
-                        </button>
-                        
-                        <!-- Кнопка удаления выбранных -->
-                        <button onclick="deleteSelectedFiles()" 
-                                id="delete-selected-btn"
-                                class="text-sm text-red-600 hover:text-red-800 flex items-center px-3 py-1.5 bg-red-50 rounded-lg transition opacity-50 pointer-events-none">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                            </svg>
-                            <span id="delete-selected-text">Удалить выбранные</span>
-                        </button>
-                    </div>
-                    
-                    <!-- Кнопка загрузки файлов -->
-                    <button onclick="document.getElementById('file-upload-input').click()" 
-                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center shadow-sm">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12"></path>
-                        </svg>
-                        Загрузить файлы
-                    </button>
-                </div>
-                
-                <!-- Форма для загрузки нескольких файлов -->
-                <form id="file-upload-form" method="POST" action="{{ route('projects.files.upload', $project) }}" enctype="multipart/form-data" class="hidden">
+                <form method="POST" action="{{ route('projects.files.upload', $project) }}" enctype="multipart/form-data" class="hidden">
                     @csrf
                     <input type="hidden" name="section" value="general">
-                    <input type="file" id="file-upload-input" name="files[]" multiple onchange="this.form.submit()">
+                    <input type="file" id="general-file-input" name="files[]" multiple onchange="this.form.submit()">
                 </form>
             </div>
-
-            <!-- Список файлов -->
-            <div id="files-list" class="space-y-4">
-                @include('projects.partials.files-list', [
-                    'filesByUser' => $project->files->groupBy('user_id'), 
-                    'project' => $project
-                ])
+            <div id="all-files">
+                @include('projects.partials.files-list', ['filesByUser' => $project->files->groupBy('user_id'), 'project' => $project])
             </div>
         </div>
 
-        <!-- Комментарии -->
-        <div id="comments-tab" class="tab-content p-6 hidden">
-            <div class="mb-4">
-                <form method="POST" action="{{ route('projects.comments', $project) }}">
-                    @csrf
-                    <div class="space-y-2">
-                        <textarea name="content" rows="3" required class="w-full border rounded-md px-3 py-2" placeholder="Ваш комментарий..."></textarea>
-                        <select name="section" class="border rounded px-3 py-2">
-                            <option value="general">Общий</option>
-                            <option value="pto">ПТО</option>
-                            <option value="supply">Снабжение</option>
-                        </select>
-                        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
-                            Отправить
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="space-y-4">
-                @foreach($project->comments as $comment)
-                    <div class="border-b last:border-0 pb-4 last:pb-0">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="font-medium">{{ $comment->user->name }}</p>
-                                <p class="text-sm text-gray-600">{{ $comment->content }}</p>
+        {{-- Comments --}}
+        <div id="comments-tab" class="tab-pane p-5 hidden">
+            <form method="POST" action="{{ route('projects.comments', $project) }}" class="mb-5">
+                @csrf
+                <textarea name="content" rows="3" required class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-blue-400 resize-none mb-2" placeholder="Ваш комментарий..."></textarea>
+                <div class="flex items-center gap-2">
+                    <select name="section" class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
+                        <option value="general">Общий</option>
+                        <option value="pto">ПТО</option>
+                        <option value="supply">Снабжение</option>
+                    </select>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">Отправить</button>
+                </div>
+            </form>
+            <div class="space-y-2">
+                @foreach($project->comments as $c)
+                    <div class="p-4 rounded-lg bg-gray-50 border border-gray-100">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-gray-800 mb-1">{{ $c->user->name }}</p>
+                                <p class="text-sm text-gray-600">{{ $c->content }}</p>
                             </div>
-                            <div class="text-right">
-                                <span class="text-xs px-2 py-1 bg-gray-200 rounded">{{ $comment->section }}</span>
-                                <p class="text-xs text-gray-500 mt-1">{{ $comment->created_at ? \Carbon\Carbon::parse($comment->created_at)->format('d.m.Y H:i') : '' }}</p>
+                            <div class="text-right flex-shrink-0">
+                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">{{ $c->section }}</span>
+                                <p class="text-xs text-gray-400 mt-1">{{ $c->created_at ? Carbon::parse($c->created_at)->format('d.m.Y H:i') : '' }}</p>
                             </div>
                         </div>
                     </div>
@@ -1168,85 +614,60 @@
             </div>
         </div>
 
-        <!-- Задачи -->
-        <div id="tasks-tab" class="tab-content p-6 hidden">
+        {{-- Tasks --}}
+        <div id="tasks-tab" class="tab-pane p-5 hidden">
             @can('createTask', $project)
                 <div class="mb-4">
-                    <a href="{{ route('projects.tasks.create', $project) }}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                    <a href="{{ route('projects.tasks.create', $project) }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Создать задачу
                     </a>
                 </div>
             @endcan
-
-            <div class="space-y-4">
+            @php
+                $taskBadge = ['sent'=>'bg-amber-100 text-amber-700','in_progress'=>'bg-blue-100 text-blue-700','completed'=>'bg-green-100 text-green-700','cancelled'=>'bg-gray-100 text-gray-500'];
+                $taskLabel = ['sent'=>'Назначена','in_progress'=>'В работе','completed'=>'Выполнена','cancelled'=>'Отменена'];
+            @endphp
+            <div class="space-y-2">
                 @foreach($project->tasks as $task)
-                    <div class="border rounded p-4">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <a href="{{ route('projects.tasks.show', [$project, $task]) }}" class="text-lg font-semibold text-blue-600 hover:text-blue-800">
-                                    {{ $task->title }}
-                                </a>
-                                <p class="text-sm text-gray-600 mt-1">{{ $task->description }}</p>
-                                <p class="text-xs text-gray-500 mt-2">
-                                    Исполнитель: {{ $task->assignee->name }}
-                                </p>
-                            </div>
-                            <span class="px-2 py-1 text-xs rounded-full 
-                                @if($task->status === 'sent') bg-yellow-100 text-yellow-800
-                                @elseif($task->status === 'in_progress') bg-blue-100 text-blue-800
-                                @else bg-green-100 text-green-800
-                                @endif">
-                                {{ $task->status }}
-                            </span>
+                    <a href="{{ route('projects.tasks.show', [$project, $task]) }}" class="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-transparent hover:border-gray-200 hover:bg-white transition-all group">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{{ $task->title }}</p>
+                            @if($task->description) <p class="text-xs text-gray-400 mt-0.5 truncate">{{ $task->description }}</p> @endif
+                            <p class="text-xs text-gray-400 mt-1">{{ $task->assignee->name }}</p>
                         </div>
-                    </div>
+                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full ml-3 flex-shrink-0 {{ $taskBadge[$task->status] ?? 'bg-gray-100 text-gray-500' }}">{{ $taskLabel[$task->status] ?? $task->status }}</span>
+                    </a>
                 @endforeach
             </div>
         </div>
 
-        <!-- Материалы -->
-        <div id="materials-tab" class="tab-content p-6 hidden">
+        {{-- Materials --}}
+        <div id="materials-tab" class="tab-pane p-5 hidden">
             @can('createMaterial', $project)
                 <div class="mb-4">
-                    <a href="{{ route('projects.materials.create', $project) }}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                    <a href="{{ route('projects.materials.create', $project) }}" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Добавить поставку
                     </a>
                 </div>
             @endcan
-
-            <div class="space-y-4">
-                @foreach($project->materialDeliveries as $delivery)
-                    <div class="border rounded p-4">
-                        <div class="flex justify-between items-start">
+            <div class="space-y-2">
+                @foreach($project->materialDeliveries as $d)
+                    <div class="p-4 rounded-lg bg-gray-50 border border-gray-100">
+                        <div class="flex items-start justify-between gap-3">
                             <div>
-                                <p class="font-semibold">{{ $delivery->material_name }}</p>
-                                <p class="text-sm">Количество: {{ $delivery->quantity }} {{ $delivery->unit }}</p>
-                                <p class="text-xs text-gray-500">
-                                    Снабженец: {{ $delivery->supplyUser->name }}
-                                </p>
-                                @if($delivery->confirmed_date)
-                                    <p class="text-xs text-gray-500">
-                                        Подтверждено: {{ $delivery->confirmed_date ? \Carbon\Carbon::parse($delivery->confirmed_date)->format('d.m.Y') : '' }}
-                                        @if($delivery->siteManagerUser)
-                                            ({{ $delivery->siteManagerUser->name }})
-                                        @endif
-                                    </p>
-                                @endif
+                                <p class="text-sm font-bold text-gray-800">{{ $d->material_name }}</p>
+                                <p class="text-xs text-gray-500 mt-0.5">{{ $d->quantity }} {{ $d->unit }} · {{ $d->supplyUser->name }}</p>
+                                @if($d->confirmed_date) <p class="text-xs text-gray-400 mt-0.5">Подтверждено {{ Carbon::parse($d->confirmed_date)->format('d.m.Y') }}</p> @endif
                             </div>
-                            <div class="text-right">
-                                <span class="px-2 py-1 text-xs rounded-full 
-                                    @if($delivery->status === 'pending') bg-yellow-100 text-yellow-800
-                                    @else bg-green-100 text-green-800
-                                    @endif">
-                                    {{ $delivery->status }}
-                                </span>
-                                @if($delivery->status === 'pending' && Auth::user()->isSiteManager())
-                                    <form method="POST" action="{{ route('materials.confirm', $delivery) }}" enctype="multipart/form-data" class="mt-2">
+                            <div class="flex-shrink-0 text-right">
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full {{ $d->status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700' }}">{{ $d->status === 'pending' ? 'Ожидает' : 'Доставлено' }}</span>
+                                @if($d->status === 'pending' && Auth::user()->isSiteManager())
+                                    <form method="POST" action="{{ route('materials.confirm', $d) }}" enctype="multipart/form-data" class="mt-2">
                                         @csrf
-                                        <input type="file" name="photo" accept="image/*" class="text-sm">
-                                        <button type="submit" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600">
-                                            Подтвердить
-                                        </button>
+                                        <input type="file" name="photo" accept="image/*" class="text-xs mb-1.5 block">
+                                        <button type="submit" class="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 transition-colors">Подтвердить</button>
                                     </form>
                                 @endif
                             </div>
@@ -1256,1259 +677,228 @@
             </div>
         </div>
 
-        <!-- Финансы -->
-        <div id="financial-tab" class="tab-content p-6 hidden">
+        {{-- Financial --}}
+        <div id="financial-tab" class="tab-pane p-5 hidden">
             @can('updateFinancial', $project)
-                <div class="mb-4">
-                    <form method="POST" action="{{ route('projects.financial.update', $project) }}">
-                        @csrf
-                        <div class="flex items-center space-x-2">
-                            <select name="financial_status" required class="border rounded px-3 py-2">
-                                <option value="pending_payment">На оплате</option>
-                                <option value="paid">Оплачено</option>
-                                <option value="not_paid">Не оплачено</option>
-                            </select>
-                            <input type="text" name="comment" placeholder="Комментарий" class="border rounded px-3 py-2 flex-1">
-                            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
-                                Обновить статус
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                <form method="POST" action="{{ route('projects.financial.update', $project) }}" class="mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    @csrf
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Обновить статус</p>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <select name="financial_status" required class="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
+                            <option value="pending_payment">На оплате</option>
+                            <option value="paid">Оплачено</option>
+                            <option value="not_paid">Не оплачено</option>
+                        </select>
+                        <input type="text" name="comment" placeholder="Комментарий" class="flex-1 min-w-32 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
+                        <button type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors">Обновить</button>
+                    </div>
+                </form>
             @endcan
-
+            @php
+                $finBadge = ['pending_payment'=>'bg-amber-100 text-amber-700','paid'=>'bg-green-100 text-green-700','not_paid'=>'bg-red-100 text-red-700'];
+                $finLabel = ['pending_payment'=>'На оплате','paid'=>'Оплачено','not_paid'=>'Не оплачено'];
+            @endphp
             <div class="space-y-2">
                 @foreach($project->financialStatusLogs as $log)
-                    <div class="p-3 bg-gray-50 rounded">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <span class="px-2 py-1 text-xs rounded-full 
-                                    @if($log->financial_status === 'pending_payment') bg-yellow-100 text-yellow-800
-                                    @elseif($log->financial_status === 'paid') bg-green-100 text-green-800
-                                    @else bg-red-100 text-red-800
-                                    @endif">
-                                    {{ $log->financial_status }}
-                                </span>
-                                @if($log->comment)
-                                    <p class="text-sm mt-1">{{ $log->comment }}</p>
-                                @endif
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs">{{ $log->user->name }}</p>
-                                <p class="text-xs text-gray-500">{{ $log->created_at ? \Carbon\Carbon::parse($log->created_at)->format('d.m.Y H:i') : '' }}</p>
-                            </div>
+                    <div class="flex items-start justify-between p-4 rounded-lg bg-gray-50 border border-gray-100">
+                        <div>
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-full {{ $finBadge[$log->financial_status] ?? 'bg-gray-100 text-gray-600' }}">{{ $finLabel[$log->financial_status] ?? $log->financial_status }}</span>
+                            @if($log->comment) <p class="text-sm text-gray-600 mt-2">{{ $log->comment }}</p> @endif
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-xs font-semibold text-gray-700">{{ $log->user->name }}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">{{ $log->created_at ? Carbon::parse($log->created_at)->format('d.m.Y H:i') : '' }}</p>
                         </div>
                     </div>
                 @endforeach
             </div>
         </div>
 
-        <!-- История -->
-        <div id="history-tab" class="tab-content p-6 hidden">
-            <div class="space-y-2">
+        {{-- History --}}
+        <div id="history-tab" class="tab-pane p-5 hidden">
+            @php $histLabel = ['created'=>'Создан','in_calculation'=>'В расчёте','on_approval'=>'На согласовании','on_revision'=>'На доработке','approved'=>'Утверждён','in_progress'=>'В реализации','completed'=>'Завершён']; @endphp
+            <div class="space-y-3">
                 @foreach($project->statusLogs as $log)
-                    <div class="p-3 bg-gray-50 rounded">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-sm">
-                                    <span class="font-medium">{{ $log->user->name }}</span>
-                                    изменил статус с 
-                                    <span class="font-medium">{{ $log->old_status }}</span>
-                                    на 
-                                    <span class="font-medium">{{ $log->new_status }}</span>
+                    <div class="relative pl-6">
+                        @if(!$loop->last) <div class="absolute left-[5px] top-4 bottom-0 w-px bg-gray-200"></div> @endif
+                        <div class="absolute left-0 top-1.5 w-2.5 h-2.5 rounded-full border-2 border-gray-300 bg-white"></div>
+                        <div class="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                            <div class="flex items-start justify-between gap-3">
+                                <p class="text-sm text-gray-700">
+                                    <span class="font-bold">{{ $log->user->name }}</span>
+                                    <span class="text-gray-400 mx-1">·</span>
+                                    <span class="text-gray-400">{{ $histLabel[$log->old_status] ?? $log->old_status }}</span>
+                                    <svg class="w-3 h-3 inline mx-1 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                    <span class="font-semibold">{{ $histLabel[$log->new_status] ?? $log->new_status }}</span>
                                 </p>
-                                @if($log->comment)
-                                    <p class="text-sm text-gray-600 mt-1">Комментарий: {{ $log->comment }}</p>
-                                @endif
+                                <p class="text-xs text-gray-400 whitespace-nowrap">{{ $log->created_at ? Carbon::parse($log->created_at)->format('d.m.Y H:i') : '' }}</p>
                             </div>
-                            <p class="text-xs text-gray-500">{{ $log->created_at ? \Carbon\Carbon::parse($log->created_at)->format('d.m.Y H:i') : '' }}</p>
+                            @if($log->comment) <p class="text-xs text-gray-400 mt-1">{{ $log->comment }}</p> @endif
                         </div>
                     </div>
                 @endforeach
             </div>
         </div>
     </div>
-
-<!-- Модальное окно для утверждения проекта -->
-<div id="approveModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 class="text-lg font-bold mb-4">Утверждение проекта</h3>
-        <form method="POST" action="{{ route('projects.approve', $project) }}">
-            @csrf
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Комментарий</label>
-                <textarea name="comment" rows="3" required class="w-full border rounded-md px-3 py-2"></textarea>
-            </div>
-            <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeApproveModal()" class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">
-                    Отмена
-                </button>
-                <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
-                    Утвердить
-                </button>
-            </div>
-        </form>
-    </div>
 </div>
 
-<!-- Модальное окно для отклонения проекта -->
-<div id="rejectModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 class="text-lg font-bold mb-4">Отклонение проекта</h3>
-        <form method="POST" action="{{ route('projects.reject', $project) }}">
-            @csrf
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Комментарий (обязательно)</label>
-                <textarea name="comment" rows="3" required class="w-full border rounded-md px-3 py-2" placeholder="Укажите что нужно исправить..."></textarea>
-            </div>
-            <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeRejectModal()" class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">
-                    Отмена
-                </button>
-                <button type="submit" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
-                    Отклонить
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Модальное окно для отклонения ПТО -->
-<div id="rejectPtoModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 class="text-lg font-bold mb-4">Отправить ПТО на доработку</h3>
-        <form method="POST" action="{{ route('projects.reject-pto', $project) }}">
-            @csrf
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Что нужно исправить?</label>
-                <textarea name="comment" rows="4" required class="w-full border rounded-md px-3 py-2" 
-                          placeholder="Укажите что именно нужно доработать в расчетах ПТО..."></textarea>
-            </div>
-            <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeRejectPtoModal()" class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">
-                    Отмена
-                </button>
-                <button type="submit" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
-                    Отправить на доработку
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Модальное окно для отклонения Снабжения -->
-<div id="rejectSupplyModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center">
-    <div class="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 class="text-lg font-bold mb-4">Отправить снабжение на доработку</h3>
-        <form method="POST" action="{{ route('projects.reject-supply', $project) }}">
-            @csrf
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Что нужно исправить?</label>
-                <textarea name="comment" rows="4" required class="w-full border rounded-md px-3 py-2" 
-                          placeholder="Укажите что именно нужно доработать в расчетах снабжения..."></textarea>
-            </div>
-            <div class="flex justify-end space-x-2">
-                <button type="button" onclick="closeRejectSupplyModal()" class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">
-                    Отмена
-                </button>
-                <button type="submit" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
-                    Отправить на доработку
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Модальное окно для добавления участников (ОБНОВЛЕННЫЙ ДИЗАЙН) -->
-<div id="addParticipantModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 hidden items-center justify-center z-50 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl transform transition-all">
-        <!-- Заголовок с градиентом -->
-        <div class="flex justify-between items-center mb-6">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
-                    </svg>
+{{-- MODALS --}}
+@foreach([
+    ['approveModal',      'Утвердить проект',         'Добавьте комментарий к решению.',    route('projects.approve', $project),       'Утвердить',    'bg-green-600 hover:bg-green-700'],
+    ['rejectModal',       'Отклонить проект',          'Укажите, что необходимо исправить.',  route('projects.reject', $project),        'Отклонить',    'bg-red-600 hover:bg-red-700'],
+    ['rejectPtoModal',    'ПТО — на доработку',        'Опишите замечания к расчётам.',       route('projects.reject-pto', $project),    'На доработку', 'bg-red-600 hover:bg-red-700'],
+    ['rejectSupplyModal', 'Снабжение — на доработку',  'Опишите замечания к сметам.',         route('projects.reject-supply', $project), 'На доработку', 'bg-red-600 hover:bg-red-700'],
+] as [$id, $title, $subtitle, $action, $btnLabel, $btnCls])
+    <div id="{{ $id }}" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50" style="align-items:center;justify-content:center;">
+        <div class="bg-white rounded-xl border border-gray-200 w-full max-w-md shadow-2xl p-6 mx-4">
+            <p class="font-extrabold text-gray-900 text-base mb-1">{{ $title }}</p>
+            <p class="text-sm text-gray-400 mb-4">{{ $subtitle }}</p>
+            <form method="POST" action="{{ $action }}">
+                @csrf
+                <textarea name="comment" rows="3" required class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none resize-none mb-4"></textarea>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="hideModal('{{ $id }}')" class="px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Отмена</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg text-white text-sm font-semibold transition-colors {{ $btnCls }}">{{ $btnLabel }}</button>
                 </div>
-                <div>
-                    <h3 class="text-xl font-bold text-gray-800">Добавить участников</h3>
-                    <p class="text-sm text-gray-500">Выберите пользователей для добавления в проект</p>
-                </div>
+            </form>
+        </div>
+    </div>
+@endforeach
+
+{{-- Add participant modal --}}
+<div id="addParticipantModal" class="fixed inset-0 bg-black bg-opacity-40 hidden z-50" style="align-items:center;justify-content:center;">
+    <div class="bg-white rounded-xl border border-gray-200 w-full max-w-lg shadow-2xl p-6 mx-4">
+        <div class="flex items-start justify-between mb-4">
+            <div>
+                <p class="font-extrabold text-gray-900 text-base">Добавить участников</p>
+                <p class="text-xs text-gray-400 mt-0.5">Роль определяется автоматически по должности</p>
             </div>
-            <button onclick="closeAddParticipantModal()" class="text-gray-400 hover:text-gray-600 transition p-2 hover:bg-gray-100 rounded-full">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
+            <button onclick="hideModal('addParticipantModal')" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
         </div>
-        
         <form method="POST" action="{{ route('projects.participants.add', $project) }}" id="add-participant-form">
             @csrf
-            
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-3">
-                    <span class="flex items-center">
-                        <svg class="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                        </svg>
-                        Выберите пользователей
-                    </span>
-                </label>
-                
-                <div class="max-h-72 overflow-y-auto border border-gray-200 rounded-xl p-2 space-y-2 bg-gray-50">
+            @php $existingRoles = $project->participants->pluck('pivot.role')->toArray(); @endphp
+            <div class="max-h-72 overflow-y-auto space-y-1.5 mb-4 pr-1">
+                @forelse($availableUsers as $user)
                     @php
-                        $existingRoles = $project->participants->pluck('pivot.role')->toArray();
+                        $exists = in_array($user->role, $existingRoles);
+                        $rb2 = $roleBadge[$user->role] ?? 'bg-gray-100 text-gray-600';
+                        $ra2 = $roleAvatar[$user->role] ?? 'bg-gray-100 text-gray-600';
+                        $rn2 = $roleLabels[$user->role] ?? $user->role;
                     @endphp
-                    
-                    @forelse($availableUsers as $user)
-                        @php
-                            $roleExists = in_array($user->role, $existingRoles);
-                            $canAdd = !$roleExists;
-                            
-                            // Цвета для разных ролей
-                            $roleColors = [
-                                'director' => 'bg-purple-100 text-purple-700 border-purple-200',
-                                'deputy_director' => 'bg-indigo-100 text-indigo-700 border-indigo-200',
-                                'pto' => 'bg-blue-100 text-blue-700 border-blue-200',
-                                'supply' => 'bg-green-100 text-green-700 border-green-200',
-                                'project_manager' => 'bg-yellow-100 text-yellow-700 border-yellow-200',
-                                'site_manager' => 'bg-orange-100 text-orange-700 border-orange-200',
-                                'accountant' => 'bg-emerald-100 text-emerald-700 border-emerald-200',
-                                'default' => 'bg-gray-100 text-gray-700 border-gray-200'
-                            ];
-                            
-                            $roleColor = $roleColors[$user->role] ?? $roleColors['default'];
-                            
-                            // Русские названия ролей
-                            $roleNames = [
-                                'director' => 'Директор',
-                                'deputy_director' => 'Зам. директора',
-                                'pto' => 'ПТО',
-                                'supply' => 'Снабжение',
-                                'project_manager' => 'Руководитель проекта',
-                                'site_manager' => 'Прораб',
-                                'accountant' => 'Бухгалтер'
-                            ];
-                        @endphp
-                        
-                        <div class="flex items-center p-3 rounded-xl transition-all duration-200 
-                            {{ $canAdd ? 'bg-white hover:shadow-md border border-gray-200' : 'bg-gray-100 opacity-60' }}"
-                            id="user-row-{{ $user->id }}">
-                            <div class="flex items-center flex-1">
-                                <div class="relative">
-                                    <input type="checkbox" 
-                                           name="users[]" 
-                                           value="{{ $user->id }}" 
-                                           id="user-{{ $user->id }}"
-                                           class="user-checkbox w-5 h-5 text-blue-600 rounded-lg border-gray-300 focus:ring-blue-500 focus:ring-2 transition"
-                                           {{ !$canAdd ? 'disabled' : '' }}
-                                           data-role="{{ $user->role }}"
-                                           data-name="{{ $user->name }}">
-                                    @if(!$canAdd)
-                                        <div class="absolute inset-0 bg-gray-200 rounded-lg opacity-30"></div>
-                                    @endif
-                                </div>
-                                
-                                <label for="user-{{ $user->id }}" class="ml-3 flex-1 flex items-center justify-between cursor-pointer {{ !$canAdd ? 'cursor-not-allowed' : '' }}">
-                                    <div class="flex items-center space-x-3">
-                                        <div class="flex-shrink-0">
-                                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                                <span class="text-lg">
-                                                    @php
-                                                        $icons = [
-                                                            'director' => '👑',
-                                                            'deputy_director' => '⭐',
-                                                            'pto' => '📐',
-                                                            'supply' => '📦',
-                                                            'project_manager' => '📋',
-                                                            'site_manager' => '🔧',
-                                                            'accountant' => '💰',
-                                                        ];
-                                                        echo $icons[$user->role] ?? '👤';
-                                                    @endphp
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <p class="font-medium text-gray-800">{{ $user->name }}</p>
-                                            <p class="text-xs text-gray-500">{{ $user->email ?? '' }}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="flex items-center space-x-2">
-                                        <span class="text-xs px-3 py-1.5 rounded-full {{ $roleColor }} font-medium">
-                                            {{ $roleNames[$user->role] ?? $user->role }}
-                                        </span>
-                                        
-                                        @if($canAdd)
-                                            <span class="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full flex items-center">
-                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                                </svg>
-                                                будет добавлен
-                                            </span>
-                                        @else
-                                            <span class="text-xs px-3 py-1.5 bg-gray-200 text-gray-600 rounded-full flex items-center">
-                                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                                                </svg>
-                                                уже есть
-                                            </span>
-                                        @endif
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="text-center py-12">
-                            <div class="text-6xl mb-4 opacity-30">👥</div>
-                            <p class="text-gray-500 font-medium">Нет доступных пользователей</p>
-                            <p class="text-sm text-gray-400 mt-1">Все пользователи уже добавлены в проект</p>
-                        </div>
-                    @endforelse
-                </div>
-                
-                <p class="text-xs text-gray-500 mt-3 flex items-center">
-                    <svg class="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    Роль определится автоматически по должности пользователя
-                </p>
+                    <label class="flex items-center gap-3 p-3 rounded-lg border transition-all {{ $exists ? 'border-gray-100 bg-gray-50 opacity-60 cursor-default' : 'border-transparent bg-gray-50 hover:border-gray-200 hover:bg-white cursor-pointer' }}">
+                        <input type="checkbox" name="users[]" value="{{ $user->id }}" class="user-cb w-4 h-4 accent-blue-600 flex-shrink-0"
+                               data-role="{{ $user->role }}" {{ $exists ? 'disabled' : '' }} onchange="syncAddBtn()">
+                        <div class="w-7 h-7 rounded-full {{ $ra2 }} flex items-center justify-center text-xs font-bold flex-shrink-0">{{ strtoupper(substr($user->name,0,1)) }}</div>
+                        <p class="flex-1 text-sm font-semibold text-gray-800 truncate">{{ $user->name }}</p>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ $rb2 }} flex-shrink-0">{{ $rn2 }}</span>
+                        @if($exists)
+                            <svg class="w-3.5 h-3.5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        @endif
+                    </label>
+                @empty
+                    <div class="text-center py-8 text-sm text-gray-400">Все пользователи уже добавлены</div>
+                @endforelse
             </div>
-            
-            <!-- Панель выбранных пользователей -->
-            <div id="selected-users-info" class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hidden">
-                <div class="flex items-center justify-between mb-3">
-                    <p class="text-sm font-semibold text-blue-800 flex items-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Выбрано пользователей: <span id="selected-count" class="ml-1 bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs">0</span>
-                    </p>
-                    <button onclick="resetUserSelection()" class="text-xs text-blue-600 hover:text-blue-800 flex items-center">
-                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                        Сбросить
-                    </button>
-                </div>
-                <div id="selected-users-list" class="space-y-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar"></div>
-            </div>
-
-            <!-- Кнопки действий -->
-            <div class="flex justify-end space-x-3 border-t pt-4">
-                <button type="button" onclick="closeAddParticipantModal()" 
-                        class="px-5 py-2.5 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                    Отмена
-                </button>
-                <button type="submit" id="add-participants-btn" 
-                        class="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/30 flex items-center"
-                        disabled>
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                    <span>Добавить выбранных</span>
+            <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                <button type="button" onclick="hideModal('addParticipantModal')" class="px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Отмена</button>
+                <button type="submit" id="add-btn" disabled class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Добавить
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-<style>
-    /* Кастомный скроллбар для списка выбранных пользователей */
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 4px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #cbd5e0;
-        border-radius: 10px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-    }
-    </style>
-
-    <script>
-    // Функции для модального окна добавления участников
-    function updateSelectedUsers() {
-        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-        const selectedCount = checkboxes.length;
-        const selectedInfo = document.getElementById('selected-users-info');
-        const selectedList = document.getElementById('selected-users-list');
-        const submitBtn = document.getElementById('add-participants-btn');
-        const countSpan = document.getElementById('selected-count');
-        
-        if (selectedCount > 0) {
-            selectedInfo.classList.remove('hidden');
-            submitBtn.disabled = false;
-            countSpan.textContent = selectedCount;
-            
-            // Обновляем список выбранных с анимацией
-            let listHtml = '';
-            checkboxes.forEach((cb, index) => {
-                const row = cb.closest('[id^="user-row-"]');
-                const userName = cb.dataset.name;
-                const userRole = cb.dataset.role;
-                
-                // Русские названия ролей
-                const roleNames = {
-                    'director': 'Директор',
-                    'deputy_director': 'Зам. директора',
-                    'pto': 'ПТО',
-                    'supply': 'Снабжение',
-                    'project_manager': 'Руководитель проекта',
-                    'site_manager': 'Прораб',
-                    'accountant': 'Бухгалтер'
-                };
-                
-                // Цвета для разных ролей в списке выбранных
-                const roleColors = {
-                    'director': 'bg-purple-100 text-purple-700',
-                    'deputy_director': 'bg-indigo-100 text-indigo-700',
-                    'pto': 'bg-blue-100 text-blue-700',
-                    'supply': 'bg-green-100 text-green-700',
-                    'project_manager': 'bg-yellow-100 text-yellow-700',
-                    'site_manager': 'bg-orange-100 text-orange-700',
-                    'accountant': 'bg-emerald-100 text-emerald-700'
-                };
-                
-                const roleColor = roleColors[userRole] || 'bg-gray-100 text-gray-700';
-                
-                listHtml += `
-                    <div class="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm border border-blue-100 animate-fade-in" style="animation-delay: ${index * 50}ms">
-                        <div class="flex items-center">
-                            <span class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs mr-2">
-                                👤
-                            </span>
-                            <span class="text-sm font-medium text-gray-700">${userName}</span>
-                        </div>
-                        <span class="text-xs px-2 py-1 rounded-full ${roleColor}">
-                            ${roleNames[userRole] || userRole}
-                        </span>
-                    </div>
-                `;
-            });
-            selectedList.innerHTML = listHtml;
-        } else {
-            selectedInfo.classList.add('hidden');
-            submitBtn.disabled = true;
-        }
-    }
-
-    // Сброс выбора
-    function resetUserSelection() {
-        document.querySelectorAll('.user-checkbox:checked').forEach(cb => {
-            cb.checked = false;
-        });
-        updateSelectedUsers();
-    }
-
-    // Добавляем анимацию появления
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
-    `;
-    document.head.appendChild(style);
-
-    // Добавляем обработчики для чекбоксов
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.user-checkbox').forEach(cb => {
-            cb.addEventListener('change', updateSelectedUsers);
-        });
-    });
-
-    // Переопределяем отправку формы
-    document.getElementById('add-participant-form')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-        if (checkboxes.length === 0) return;
-        
-        // Добавляем анимацию загрузки на кнопку
-        const submitBtn = document.getElementById('add-participants-btn');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = `
-            <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Добавление...
-        `;
-        submitBtn.disabled = true;
-        
-        // Создаем скрытые поля для каждого пользователя
-        checkboxes.forEach(cb => {
-            const userId = cb.value;
-            const userRole = cb.dataset.role;
-            
-            const userIdInput = document.createElement('input');
-            userIdInput.type = 'hidden';
-            userIdInput.name = 'participants[' + userId + '][user_id]';
-            userIdInput.value = userId;
-            this.appendChild(userIdInput);
-            
-            const roleInput = document.createElement('input');
-            roleInput.type = 'hidden';
-            roleInput.name = 'participants[' + userId + '][role]';
-            roleInput.value = userRole;
-            this.appendChild(roleInput);
-        });
-        
-        // Отправляем форму
-        this.submit();
-    });
-</script>
-
 <script>
-    function showTab(tabName) {
-        // Скрываем все табы
-        document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.add('hidden');
-        });
-        
-        // Показываем выбранный таб
-        document.getElementById(tabName + '-tab').classList.remove('hidden');
-        
-        // Обновляем активную кнопку
-        document.querySelectorAll('.tab-button').forEach(button => {
-            button.classList.remove('active', 'text-blue-600', 'border-blue-600');
-            button.classList.add('text-gray-500');
-        });
-        
-        event.target.classList.add('active', 'text-blue-600', 'border-blue-600');
-        event.target.classList.remove('text-gray-500');
-    }
-
-    function openApproveModal() {
-        document.getElementById('approveModal').classList.remove('hidden');
-        document.getElementById('approveModal').classList.add('flex');
-    }
-
-    function closeApproveModal() {
-        document.getElementById('approveModal').classList.add('hidden');
-        document.getElementById('approveModal').classList.remove('flex');
-    }
-
-    function openRejectModal() {
-        document.getElementById('rejectModal').classList.remove('hidden');
-        document.getElementById('rejectModal').classList.add('flex');
-    }
-
-    function closeRejectModal() {
-        document.getElementById('rejectModal').classList.add('hidden');
-        document.getElementById('rejectModal').classList.remove('flex');
-    }
-
-    function openRejectPtoModal() {
-        document.getElementById('rejectPtoModal').classList.remove('hidden');
-        document.getElementById('rejectPtoModal').classList.add('flex');
-    }
-
-    function closeRejectPtoModal() {
-        document.getElementById('rejectPtoModal').classList.add('hidden');
-        document.getElementById('rejectPtoModal').classList.remove('flex');
-    }
-
-    function openRejectSupplyModal() {
-        document.getElementById('rejectSupplyModal').classList.remove('hidden');
-        document.getElementById('rejectSupplyModal').classList.add('flex');
-    }
-
-    function closeRejectSupplyModal() {
-        document.getElementById('rejectSupplyModal').classList.add('hidden');
-        document.getElementById('rejectSupplyModal').classList.remove('flex');
-    }
-
-    function openAddParticipantModal() {
-        document.getElementById('addParticipantModal').classList.remove('hidden');
-        document.getElementById('addParticipantModal').classList.add('flex');
-    }
-
-    function closeAddParticipantModal() {
-        document.getElementById('addParticipantModal').classList.add('hidden');
-        document.getElementById('addParticipantModal').classList.remove('flex');
-    }
-</script>
-
-<script>
-// Функции для отображения выбранных файлов в ПТО секции
-function updatePTOFileList(input) {
-    const fileList = document.getElementById('pto-file-list');
-    displaySelectedFiles(input, fileList);
+// Modal helpers — используем display flex для центрирования
+function showModal(id) {
+    const m = document.getElementById(id);
+    m.style.display = 'flex';
 }
-
-// Функции для отображения выбранных файлов в Снабжении
-function updateSupplyFileList(input) {
-    const fileList = document.getElementById('supply-file-list');
-    displaySelectedFiles(input, fileList);
+function hideModal(id) {
+    const m = document.getElementById(id);
+    m.style.display = 'none';
 }
-
-// Общая функция для отображения списка файлов
-function displaySelectedFiles(input, fileListElement) {
-    fileListElement.innerHTML = '';
-    
-    if (input.files.length > 0) {
-        const list = document.createElement('ul');
-        list.className = 'list-disc list-inside space-y-1';
-        
-        for (let i = 0; i < input.files.length; i++) {
-            const file = input.files[i];
-            const li = document.createElement('li');
-            li.className = 'text-gray-600 text-xs';
-            
-            // Форматируем размер файла
-            let fileSize = file.size;
-            let sizeText = '';
-            if (fileSize < 1024) {
-                sizeText = fileSize + ' B';
-            } else if (fileSize < 1024 * 1024) {
-                sizeText = (fileSize / 1024).toFixed(1) + ' KB';
-            } else {
-                sizeText = (fileSize / (1024 * 1024)).toFixed(1) + ' MB';
-            }
-            
-            li.textContent = `${file.name} (${sizeText})`;
-            list.appendChild(li);
-        }
-        
-        fileListElement.appendChild(list);
-        
-        // Добавляем информацию о количестве файлов
-        const countInfo = document.createElement('p');
-        countInfo.className = 'text-xs text-blue-600 mt-2 font-medium';
-        countInfo.textContent = `Выбрано файлов: ${input.files.length}`;
-        fileListElement.appendChild(countInfo);
-    } else {
-        fileListElement.innerHTML = '<p class="text-xs text-gray-400">Файлы не выбраны</p>';
-    }
-}
-
-// Поддержка drag & drop
-document.addEventListener('DOMContentLoaded', function() {
-    // Для ПТО
-    const ptoDropZone = document.querySelector('#pto-files')?.closest('.border-2');
-    if (ptoDropZone) {
-        setupDragAndDrop(ptoDropZone, 'pto-files');
-    }
-    
-    // Для Снабжения
-    const supplyDropZone = document.querySelector('#supply-files')?.closest('.border-2');
-    if (supplyDropZone) {
-        setupDragAndDrop(supplyDropZone, 'supply-files');
-    }
+// Close on backdrop click
+document.querySelectorAll('.fixed.inset-0').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.style.display = 'none'; });
 });
 
-function setupDragAndDrop(dropZone, inputId) {
-    const input = document.getElementById(inputId);
-    
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
+// Tabs
+function switchTab(btn, paneId) {
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('bg-white','text-gray-900','shadow-sm');
+        b.classList.add('text-gray-500');
     });
-    
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, highlight, false);
-    });
-    
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, unhighlight, false);
-    });
-    
-    function highlight() {
-        dropZone.classList.add('border-blue-400', 'bg-blue-50');
-    }
-    
-    function unhighlight() {
-        dropZone.classList.remove('border-blue-400', 'bg-blue-50');
-    }
-    
-    dropZone.addEventListener('drop', handleDrop, false);
-    
-    function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        input.files = files;
-        
-        // Обновляем список файлов
-        const event = new Event('change', { bubbles: true });
-        input.dispatchEvent(event);
-    }
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+    btn.classList.add('bg-white','text-gray-900','shadow-sm');
+    btn.classList.remove('text-gray-500');
+    document.getElementById(paneId).classList.remove('hidden');
 }
-</script>
 
-<script>
-    // Переменные для хранения всех файловых элементов
-    let allFileItems = [];
-    let currentFilter = 'all';
-
-    // Функция для фильтрации файлов
-    function filterFiles(filter) {
-        currentFilter = filter;
-        
-        // Обновляем стили кнопок
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.remove('bg-blue-500', 'text-white', 'shadow-md');
-            btn.classList.add('text-gray-700', 'hover:bg-gray-200');
-        });
-        event.target.classList.remove('text-gray-700', 'hover:bg-gray-200');
-        event.target.classList.add('bg-blue-500', 'text-white', 'shadow-md');
-        
-        // Применяем фильтр
-        applyFilters();
-    }
-
-    // Функция поиска
-    document.getElementById('file-search')?.addEventListener('input', function(e) {
-        applyFilters();
+// File filter
+function filterFiles(filter, btn) {
+    document.querySelectorAll('.file-filter').forEach(b => {
+        b.classList.remove('bg-blue-600','text-white');
+        b.classList.add('bg-gray-100','text-gray-500');
     });
-
-    // Функция сортировки
-    document.getElementById('sort-files')?.addEventListener('change', function(e) {
-        applyFilters();
+    btn.classList.add('bg-blue-600','text-white');
+    btn.classList.remove('bg-gray-100','text-gray-500');
+    document.querySelectorAll('.file-group').forEach(g => {
+        g.style.display = (filter === 'all' || g.dataset.section === filter) ? '' : 'none';
     });
+}
 
-    // Основная функция применения всех фильтров
-    function applyFilters() {
-        const searchTerm = document.getElementById('file-search')?.value.toLowerCase() || '';
-        const sortBy = document.getElementById('sort-files')?.value || 'date_desc';
-        
-        // Получаем все группы файлов
-        const groups = document.querySelectorAll('.file-group');
-        
-        groups.forEach(group => {
-            const files = group.querySelectorAll('.file-item');
-            let visibleCount = 0;
-            
-            files.forEach(file => {
-                const fileName = file.dataset.filename || '';
-                const fileSection = file.querySelector('.text-xs.px-2.py-1').textContent.includes('ПТО') ? 'pto' : 
-                                (file.querySelector('.text-xs.px-2.py-1').textContent.includes('Снабжение') ? 'supply' : 'general');
-                
-                // Проверяем фильтр
-                const matchesFilter = currentFilter === 'all' || fileSection === currentFilter;
-                
-                // Проверяем поиск
-                const matchesSearch = fileName.includes(searchTerm);
-                
-                if (matchesFilter && matchesSearch) {
-                    file.style.display = '';
-                    visibleCount++;
-                } else {
-                    file.style.display = 'none';
-                }
-            });
-            
-            // Скрываем группу, если в ней нет видимых файлов
-            if (visibleCount === 0) {
-                group.style.display = 'none';
-            } else {
-                group.style.display = '';
-            }
-        });
-        
-        // Применяем сортировку
-        sortFiles(sortBy);
-    }
+// File count
+function showCount(input, targetId) {
+    const el = document.getElementById(targetId);
+    if (el && input.files.length) { el.textContent = input.files.length + ' файлов выбрано'; el.style.display = ''; }
+}
 
-    // Функция сортировки файлов
-    function sortFiles(sortBy) {
-        const groups = document.querySelectorAll('.file-group');
-        
-        groups.forEach(group => {
-            const filesContainer = group.querySelector('[id^="files-"]');
-            const files = Array.from(filesContainer.querySelectorAll('.file-item'));
-            
-            files.sort((a, b) => {
-                const aVal = a.dataset[sortBy.split('_')[0]];
-                const bVal = b.dataset[sortBy.split('_')[0]];
-                const order = sortBy.split('_')[1] === 'asc' ? 1 : -1;
-                
-                if (sortBy.startsWith('name')) {
-                    return order * aVal.localeCompare(bVal);
-                } else {
-                    return order * (parseInt(aVal) - parseInt(bVal));
-                }
-            });
-            
-            // Переставляем элементы
-            files.forEach(file => filesContainer.appendChild(file));
-        });
-    }
+// Delete
+const PID  = {{ $project->id }};
+const CSRF = document.querySelector('meta[name="csrf-token"]')?.content;
 
-    // Функция для сворачивания/разворачивания файлов пользователя
-    function toggleUserFiles(userId) {
-        const filesDiv = document.getElementById(`files-${userId}`);
-        const arrow = document.getElementById(`arrow-${userId}`);
-        
-        if (filesDiv.style.display === 'none') {
-            filesDiv.style.display = '';
-            arrow.style.transform = 'rotate(0deg)';
-        } else {
-            filesDiv.style.display = 'none';
-            arrow.style.transform = 'rotate(-90deg)';
-        }
-    }
+function deleteSingle(id) {
+    if (!confirm('Удалить файл?')) return;
+    fetch('/projects/' + PID + '/files/' + id, {
+        method: 'DELETE', headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' }
+    }).then(r => r.json()).then(d => { if (d.success) document.getElementById('file-' + id)?.remove(); });
+}
 
-    // Функция удаления файла
-    function deleteFile(fileId) {
-        if (!confirm('Удалить этот файл?')) return;
-        
-        const projectId = {{ $project->id }};
-        
-        fetch(`/projects/${projectId}/files/${fileId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const fileElement = document.getElementById(`file-${fileId}`);
-                if (fileElement) {
-                    const group = fileElement.closest('.file-group');
-                    fileElement.remove();
-                    
-                    // Если в группе не осталось файлов, обновляем счетчик или удаляем группу
-                    const remainingFiles = group.querySelectorAll('.file-item').length;
-                    if (remainingFiles === 0) {
-                        group.remove();
-                    }
-                }
-            }
-        });
-    }
+function syncDel(sec) {
+    const n = document.querySelectorAll('.file-cb-' + sec + ':checked').length;
+    const b = document.getElementById('del-' + sec + '-btn');
+    if (b) b.style.display = n ? 'inline-flex' : 'none';
+}
 
-    // Инициализация при загрузке
-    document.addEventListener('DOMContentLoaded', function() {
-        // Собираем данные о файлах
-        document.querySelectorAll('.file-item').forEach(file => {
-            allFileItems.push({
-                element: file,
-                filename: file.dataset.filename || '',
-                date: parseInt(file.dataset.date) || 0,
-                size: parseInt(file.dataset.size) || 0
-            });
-        });
-        
-        // Добавляем поддержку Enter в поиске
-        const searchInput = document.getElementById('file-search');
-        if (searchInput) {
-            searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    applyFilters();
-                }
-            });
-        }
-    });
-</script>
-<script>
-    // Функции для работы с файлами ПТО и Снабжения
-    let selectedPTOFiles = new Set();
-    let selectedSupplyFiles = new Set();
+function deleteSelected(sec) {
+    const ids = [...document.querySelectorAll('.file-cb-' + sec + ':checked')].map(c => c.dataset.id);
+    if (!ids.length || !confirm('Удалить ' + ids.length + ' файлов?')) return;
+    ids.forEach(id => fetch('/projects/' + PID + '/files/' + id, {
+        method: 'DELETE', headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' }
+    }).then(r => r.json()).then(d => { if (d.success) document.getElementById('file-' + id)?.remove(); }));
+    syncDel(sec);
+}
 
-    // Функция для обновления списка выбранных файлов
-    function toggleFileSelection(checkbox, section) {
-        const fileId = checkbox.dataset.fileId;
-        if (checkbox.checked) {
-            if (section === 'pto') {
-                selectedPTOFiles.add(fileId);
-            } else {
-                selectedSupplyFiles.add(fileId);
-            }
-        } else {
-            if (section === 'pto') {
-                selectedPTOFiles.delete(fileId);
-            } else {
-                selectedSupplyFiles.delete(fileId);
-            }
-        }
-        
-        // Обновляем кнопку удаления
-        updateDeleteButton(section);
-    }
-
-    // Функция для выбора всех файлов
-    function toggleSelectAll(section) {
-        const checkboxes = document.querySelectorAll(`.file-checkbox-${section}`);
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        const selectedSet = section === 'pto' ? selectedPTOFiles : selectedSupplyFiles;
-        
-        // Очищаем текущий набор
-        selectedSet.clear();
-        
-        checkboxes.forEach(cb => {
-            cb.checked = !allChecked;
-            const fileId = cb.dataset.fileId;
-            
-            if (!allChecked) {
-                selectedSet.add(fileId);
-            }
-        });
-        
-        updateDeleteButton(section);
-    }
-
-    // Функция для обновления состояния кнопки удаления
-    function updateDeleteButton(section) {
-        const selectedCount = section === 'pto' ? selectedPTOFiles.size : selectedSupplyFiles.size;
-        const deleteBtn = section === 'pto' 
-            ? document.querySelector('button[onclick="deleteSelectedFiles(\'pto\')"]')
-            : document.querySelector('button[onclick="deleteSelectedFiles(\'supply\')"]');
-        
-        if (deleteBtn) {
-            if (selectedCount > 0) {
-                deleteBtn.classList.remove('opacity-50', 'pointer-events-none');
-                deleteBtn.innerHTML = `
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                    Удалить выбранные (${selectedCount})
-                `;
-            } else {
-                deleteBtn.classList.add('opacity-50', 'pointer-events-none');
-                deleteBtn.innerHTML = `
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                    Удалить выбранные
-                `;
-            }
-        }
-    }
-
-    // Функция для удаления выбранных файлов
-    function deleteSelectedFiles(section) {
-        const selectedSet = section === 'pto' ? selectedPTOFiles : selectedSupplyFiles;
-        const fileIds = Array.from(selectedSet);
-        
-        if (fileIds.length === 0) return;
-        
-        if (!confirm(`Удалить ${fileIds.length} выбранных файлов?`)) return;
-        
-        const projectId = {{ $project->id }};
-        let deletedCount = 0;
-        
-        // Удаляем файлы по одному
-        fileIds.forEach(fileId => {
-            fetch(`/projects/${projectId}/files/${fileId}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Удаляем элемент из DOM
-                    const fileElement = document.getElementById(`file-${fileId}`);
-                    if (fileElement) {
-                        fileElement.remove();
-                    }
-                    
-                    deletedCount++;
-                    selectedSet.delete(fileId);
-                    
-                    // Если все файлы удалены, обновляем интерфейс
-                    if (deletedCount === fileIds.length) {
-                        updateDeleteButton(section);
-                        
-                        // Проверяем, остались ли файлы в контейнере
-                        const container = document.getElementById(`${section}-files-container`);
-                        if (container && container.children.length === 0) {
-                            // Показываем сообщение о пустом списке
-                            location.reload(); // Перезагружаем для обновления всего блока
-                        } else {
-                            alert('Файлы успешно удалены');
-                        }
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка при удалении файла:', error);
-            });
-        });
-    }
-
-    // Функция для удаления одного файла
-    function deleteSingleFile(fileId) {
-        if (!confirm('Удалить этот файл?')) return;
-        
-        const projectId = {{ $project->id }};
-        
-        fetch(`/projects/${projectId}/files/${fileId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const fileElement = document.getElementById(`file-${fileId}`);
-                if (fileElement) {
-                    fileElement.remove();
-                    
-                    // Удаляем из набора выбранных, если был выбран
-                    selectedPTOFiles.delete(fileId.toString());
-                    selectedSupplyFiles.delete(fileId.toString());
-                    updateDeleteButton('pto');
-                    updateDeleteButton('supply');
-                    
-                    // Проверяем, остались ли файлы
-                    const ptoContainer = document.getElementById('pto-files-container');
-                    const supplyContainer = document.getElementById('supply-files-container');
-                    
-                    if ((ptoContainer && ptoContainer.children.length === 0) || 
-                        (supplyContainer && supplyContainer.children.length === 0)) {
-                        // Перезагружаем для обновления UI
-                        location.reload();
-                    }
-                }
-            } else {
-                alert('Ошибка при удалении файла');
-            }
-        })
-        .catch(error => {
-            console.error('Ошибка:', error);
-            alert('Произошла ошибка при удалении файла');
-        });
-    }
-
-    // Инициализация при загрузке страницы
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM loaded, initializing file handlers');
-        
-        // Добавляем обработчики для чекбоксов ПТО
-        document.querySelectorAll('.file-checkbox-pto').forEach(cb => {
-            cb.addEventListener('change', function() {
-                toggleFileSelection(this, 'pto');
-            });
-        });
-        
-        // Добавляем обработчики для чекбоксов Снабжения
-        document.querySelectorAll('.file-checkbox-supply').forEach(cb => {
-            cb.addEventListener('change', function() {
-                toggleFileSelection(this, 'supply');
-            });
-        });
-        
-        // Инициализация кнопок удаления
-        updateDeleteButton('pto');
-        updateDeleteButton('supply');
-        
-        // Добавляем обработчики для кнопок удаления одного файла
-        document.querySelectorAll('[onclick^="deleteSingleFile"]').forEach(btn => {
-            const originalClick = btn.onclick;
-            btn.onclick = function(e) {
-                e.preventDefault();
-                const fileId = this.getAttribute('onclick').match(/\d+/)[0];
-                deleteSingleFile(fileId);
-            };
+// Add participant
+function syncAddBtn() {
+    document.getElementById('add-btn').disabled = !document.querySelectorAll('.user-cb:checked').length;
+}
+document.getElementById('add-participant-form')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    document.querySelectorAll('.user-cb:checked').forEach(cb => {
+        [['user_id', cb.value], ['role', cb.dataset.role]].forEach(([k, v]) => {
+            const i = document.createElement('input');
+            i.type = 'hidden'; i.name = 'participants[' + cb.value + '][' + k + ']'; i.value = v;
+            this.appendChild(i);
         });
     });
-
-    // Для отладки - выводим в консоль
-    window.deleteSingleFile = deleteSingleFile;
-    window.deleteSelectedFiles = deleteSelectedFiles;
-</script>
-
-<script>
-    // Хранилище выбранных файлов для общего раздела
-    let selectedFiles = new Set();
-
-    // Функция обновления счетчика выбранных файлов
-    function updateSelectedCount() {
-        const checkboxes = document.querySelectorAll('.file-checkbox:checked');
-        selectedFiles.clear();
-        
-        checkboxes.forEach(cb => {
-            selectedFiles.add(cb.dataset.fileId);
-        });
-        
-        const deleteBtn = document.getElementById('delete-selected-btn');
-        const deleteText = document.getElementById('delete-selected-text');
-        
-        if (deleteBtn) {
-            if (selectedFiles.size > 0) {
-                deleteBtn.classList.remove('opacity-50', 'pointer-events-none');
-                deleteText.textContent = `Удалить выбранные (${selectedFiles.size})`;
-            } else {
-                deleteBtn.classList.add('opacity-50', 'pointer-events-none');
-                deleteText.textContent = 'Удалить выбранные';
-            }
-        }
-    }
-
-    // Функция выбора всех файлов
-    function toggleSelectAllFiles() {
-        const checkboxes = document.querySelectorAll('.file-checkbox');
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        
-        checkboxes.forEach(cb => {
-            cb.checked = !allChecked;
-        });
-        
-        updateSelectedCount();
-    }
-
-    // Функция удаления выбранных файлов
-    function deleteSelectedFiles() {
-        if (selectedFiles.size === 0) return;
-        
-        if (!confirm(`Удалить ${selectedFiles.size} выбранных файлов?`)) return;
-        
-        const projectId = {{ $project->id }};
-        const fileIds = Array.from(selectedFiles);
-        let deletedCount = 0;
-        
-        fileIds.forEach(fileId => {
-            fetch(`/projects/${projectId}/files/${fileId}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const fileElement = document.getElementById(`file-${fileId}`);
-                    if (fileElement) {
-                        fileElement.remove();
-                    }
-                    
-                    deletedCount++;
-                    
-                    if (deletedCount === fileIds.length) {
-                        selectedFiles.clear();
-                        updateSelectedCount();
-                        
-                        // Проверяем, остались ли файлы
-                        const anyFiles = document.querySelectorAll('.file-item').length;
-                        if (anyFiles === 0) {
-                            location.reload(); // Перезагружаем если файлов больше нет
-                        }
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Ошибка при удалении:', error);
-            });
-        });
-    }
-
-    // Функции для модального окна добавления участников
-    function updateSelectedUsers() {
-        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-        const selectedCount = checkboxes.length;
-        const selectedInfo = document.getElementById('selected-users-info');
-        const selectedList = document.getElementById('selected-users-list');
-        const submitBtn = document.getElementById('add-participants-btn');
-        
-        if (selectedCount > 0) {
-            selectedInfo.classList.remove('hidden');
-            submitBtn.disabled = false;
-            
-            // Обновляем счетчик
-            document.getElementById('selected-count').textContent = selectedCount;
-            
-            // Обновляем список выбранных
-            let listHtml = '';
-            checkboxes.forEach(cb => {
-                const userName = cb.dataset.name;
-                const userRole = cb.dataset.role;
-                listHtml += `<div class="flex justify-between">
-                    <span>${userName}</span>
-                    <span class="text-blue-600">→ ${userRole}</span>
-                </div>`;
-            });
-            selectedList.innerHTML = listHtml;
-        } else {
-            selectedInfo.classList.add('hidden');
-            submitBtn.disabled = true;
-        }
-    }
-
-    // Сброс выбора
-    function resetUserSelection() {
-        document.querySelectorAll('.user-checkbox').forEach(cb => {
-            cb.checked = false;
-        });
-        updateSelectedUsers();
-    }
-
-    // Добавляем обработчики для чекбоксов пользователей
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.user-checkbox').forEach(cb => {
-            cb.addEventListener('change', updateSelectedUsers);
-        });
-        
-        // Добавляем обработчики для чекбоксов файлов
-        document.querySelectorAll('.file-checkbox').forEach(cb => {
-            cb.addEventListener('change', updateSelectedCount);
-        });
-    });
-
-    // Переопределяем отправку формы для добавления ролей
-    document.getElementById('add-participant-form')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-        if (checkboxes.length === 0) return;
-        
-        // Создаем скрытые поля для каждого пользователя
-        checkboxes.forEach(cb => {
-            const userId = cb.value;
-            const userRole = cb.dataset.role;
-            
-            // Добавляем скрытое поле для user_id
-            const userIdInput = document.createElement('input');
-            userIdInput.type = 'hidden';
-            userIdInput.name = 'participants[' + userId + '][user_id]';
-            userIdInput.value = userId;
-            this.appendChild(userIdInput);
-            
-            // Добавляем скрытое поле для роли
-            const roleInput = document.createElement('input');
-            roleInput.type = 'hidden';
-            roleInput.name = 'participants[' + userId + '][role]';
-            roleInput.value = userRole;
-            this.appendChild(roleInput);
-        });
-        
-        // Отправляем форму
-        this.submit();
-    });
+    this.submit();
+});
 </script>
 @endsection
